@@ -878,7 +878,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 					}
 				}
 			} else if gerund {
-				if c.PartOfSpeech[0] == 'v' {
+				if len(candidate.infixes) == 1 && c.PartOfSpeech[0] == 'v' {
 					// Make sure the <us> is in the correct place
 					rebuiltVerb := strings.ReplaceAll(c.InfixLocations, "<0>", "")
 					rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<1>", "us")
@@ -892,9 +892,9 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						a.Affixes.Infix = candidate.infixes
 						a.Affixes.Suffix = candidate.suffixes
 						results = AppendAndAlphabetize(results, a)
-					} /*else {
+					} else {
 						results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **tì"+rebuiltVerb+"**?", c.IPA))
-					}*/
+					}
 				}
 			} else if candidate.insistPOS == "n." {
 				// n., pn., Prop.n. and inter. (but not vin.)
@@ -933,6 +933,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						for i := len(candidate.suffixes) - 1; i >= 0; i-- {
 							if candidate.suffixes[i] == "a" {
 								attributed = true
+								break
 							}
 						}
 						// Forward search fixs the "a" before "yu" and "tswo"
@@ -950,11 +951,17 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						}
 					}
 
+					looseTì := false
+
 					if len(candidate.prefixes) > 0 {
 						// Reverse search is more likely to find it immediately
 						for i := len(candidate.prefixes) - 1; i >= 0; i-- {
 							if candidate.prefixes[i] == "a" {
 								attributed = true
+							} else if candidate.prefixes[i] == "tì" {
+								// we found gerunds up top, so this isn't needed
+								looseTì = true
+								break
 							} else {
 								for _, j := range verbPrefixes {
 									if candidate.prefixes[i] == j {
@@ -968,7 +975,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 								}
 							}
 
-							if infixBan || doubleBan {
+							if infixBan || doubleBan || looseTì {
 								break
 							}
 						}
@@ -980,7 +987,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 					}
 
 					// Take action on tsuk-verb-yus and a-verb-tswos
-					if doubleBan || (attributed && infixBan) {
+					if doubleBan || (attributed && infixBan) || looseTì {
 						continue
 					}
 
@@ -1074,13 +1081,13 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							// v<us>erb-a and v<awn>erb-a
 							results = AppendAndAlphabetize(results, a)
 						} /*else if firstInfixes == "us" {
-								results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **"+rebuiltVerbForest+"**?", c.IPA))
-							}
-						} else if gerund { // ti is needed to weed out non-productive tì-verbs
 							results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **"+rebuiltVerbForest+"**?", c.IPA))
-						} else {
-							results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **"+rebuiltVerbForest+"**?", c.IPA))
-						}*/
+						}
+					} else if gerund { // ti is needed to weed out non-productive tì-verbs
+						results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **"+rebuiltVerbForest+"**?", c.IPA))
+					} else {
+						results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **"+rebuiltVerbForest+"**?", c.IPA))
+					}*/
 					}
 				} else if candidate.insistPOS == "nì." {
 					posNoun := c.PartOfSpeech
