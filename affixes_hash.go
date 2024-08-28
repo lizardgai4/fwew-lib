@@ -1089,23 +1089,24 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **"+rebuiltVerbForest+"**?", c.IPA))
 					}*/
 					}
-				} else if candidate.insistPOS == "nì." {
-					posNoun := c.PartOfSpeech
-					if len(candidate.infixes) == 0 && (posNoun == "adj." || posNoun == "pn.") {
-						a := c
-						a.Affixes.Lenition = candidate.lenition
-						a.Affixes.Prefix = candidate.prefixes
-						a.Affixes.Suffix = candidate.suffixes
-						results = AppendAndAlphabetize(results, a)
-					}
-				} else if len(candidate.infixes) == 0 {
+				}
+			} else if candidate.insistPOS == "nì." {
+				posNoun := c.PartOfSpeech
+				if len(candidate.infixes) == 0 && (posNoun == "adj." || posNoun == "pn.") {
 					a := c
 					a.Affixes.Lenition = candidate.lenition
 					a.Affixes.Prefix = candidate.prefixes
 					a.Affixes.Suffix = candidate.suffixes
 					results = AppendAndAlphabetize(results, a)
 				}
+			} else if len(candidate.infixes) == 0 {
+				a := c
+				a.Affixes.Lenition = candidate.lenition
+				a.Affixes.Prefix = candidate.prefixes
+				a.Affixes.Suffix = candidate.suffixes
+				results = AppendAndAlphabetize(results, a)
 			}
+
 		}
 	}
 	return
