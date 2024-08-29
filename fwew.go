@@ -292,7 +292,7 @@ func TranslateFromNaviHashHelper(start int, allWords []string, checkFixes bool) 
 	i := start
 
 	// don't crunch more than once
-	crunched := dialectCrunch(allWords, false)
+	crunched := dialectCrunch(allWords, true)
 
 	searchNaviWord := crunched[i]
 	results = [][]Word{{simpleWord(allWords[i])}}

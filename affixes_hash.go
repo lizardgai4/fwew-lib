@@ -787,7 +787,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 	conjugations := deconjugate(searchNaviWord)
 	for _, candidate := range conjugations {
 		a := strings.ReplaceAll(candidate.word, "ù", "u")
-		standardizedWordArray := dialectCrunch(strings.Split(a, " "), false)
+		standardizedWordArray := dialectCrunch(strings.Split(a, " "), true)
 		a = ""
 		for i, b := range standardizedWordArray {
 			if i != 0 {
@@ -892,9 +892,9 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						a.Affixes.Infix = candidate.infixes
 						a.Affixes.Suffix = candidate.suffixes
 						results = AppendAndAlphabetize(results, a)
-					} else {
+					} /*else {
 						results = AppendAndAlphabetize(results, infixError(searchNaviWord, "Did you mean **tì"+rebuiltVerb+"**?", c.IPA))
-					}
+					}*/
 				}
 			} else if candidate.insistPOS == "n." {
 				// n., pn., Prop.n. and inter. (but not vin.)
@@ -1060,7 +1060,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "errr", "er")
 					}
 
-					rebuiltVerbArray := dialectCrunch(strings.Split(rebuiltVerb, " "), false)
+					rebuiltVerbArray := dialectCrunch(strings.Split(rebuiltVerb, " "), true)
 					rebuiltVerb = ""
 					for k, x := range rebuiltVerbArray {
 						if k != 0 {
