@@ -116,7 +116,7 @@ var verbSuffixes = []string{"tswo", "yu"}
 
 var infixes = map[rune][]string{
 	rune('a'): {"ay", "asy", "aly", "ary", "am", "alm", "arm", "ats", "awn"},
-	rune('ä'): {"äng", "äp"},
+	rune('ä'): {"äng", "äpeyk", "äp"},
 	rune('e'): {"ep", "er", "ei", "eiy", "eng", "eyk"},
 	rune('i'): {"iv", "ilv", "irv", "imv", "iyev"},
 	rune('ì'): {"ìy", "ìsy", "ìly", "ìry", "ìm", "ìlm", "ìrm", "ìyev"},
@@ -727,7 +727,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 		}
 	}
 
-	if checkInfixes && len(input.infixes) < 4 {
+	if checkInfixes && len(input.infixes) < 3 {
 		// Maybe someone else came in with stripped infixes
 		if len(input.word) > 2 && input.word[len(input.word)-3] != ' ' &&
 			strings.HasSuffix(input.word, "si") && !strings.HasSuffix(input.word, "usi") &&
