@@ -388,11 +388,11 @@ func StageThree() (err error) {
 		wordCount += 1
 
 		// Progress counter
-		if wordCount%10 == 0 {
-			fmt.Println("On word " + strconv.Itoa(wordCount))
+		if wordCount%100 == 0 {
 			total_seconds := time.Since(start)
 
-			log.Printf("Time elapsed is " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+			log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
+				strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 				strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
 				strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds")
 		}
