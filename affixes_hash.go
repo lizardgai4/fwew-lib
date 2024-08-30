@@ -25,6 +25,7 @@ func candidateDupe(candidate ConjugationCandidate) (c ConjugationCandidate) {
 }
 
 var candidates []ConjugationCandidate
+var candidateHash = map[string]ConjugationCandidate{}
 var unlenitionLetters = []string{
 	"ts", "kx", "tx", "px", // traps digraphs because they cannot unlenite
 	"f", "p", "h", "k", "s",
@@ -117,14 +118,14 @@ var verbSuffixes = []string{"tswo", "yu"}
 var infixes = map[rune][]string{
 	rune('a'): {"ay", "asy", "aly", "ary", "am", "alm", "arm", "ats", "awn"},
 	rune('ä'): {"äng", "äpeyk", "äp"},
-	rune('e'): {"ep", "er", "ei", "eiy", "eng", "eyk"},
+	rune('e'): {"epeyk", "ep", "er", "ei", "eiy", "eng", "eyk"},
 	rune('i'): {"iv", "ilv", "irv", "imv", "iyev"},
 	rune('ì'): {"ìy", "ìsy", "ìly", "ìry", "ìm", "ìlm", "ìrm", "ìyev"},
 	rune('o'): {"ol"},
 	rune('u'): {"us", "uy"},
 }
 
-var prefirst = []string{"äp", "ep", "eyk"}
+var prefirst = []string{"äp", "äpeyk", "ep", "epeyk", "eyk"}
 var first = []string{"ay", "asy", "aly", "ary", "ìy", "ìsy", "ìly", "ìry", "ol", "er", "ìm",
 	"ìlm", "ìrm", "am", "alm", "arm", "ìyev", "iyev", "iv", "ilv", "irv", "imv", "us", "awn"}
 var second = []string{"ei", "eiy", "äng", "eng", "uy", "ats"}
@@ -150,8 +151,8 @@ var weirdNounSuffixes = map[string]string{
 }
 
 func isDuplicate(input ConjugationCandidate) bool {
-	for _, a := range candidates {
-		if input.word == a.word && input.insistPOS == a.insistPOS {
+	if a, ok := candidateHash[input.word]; ok {
+		if input.insistPOS == a.insistPOS {
 			if len(input.prefixes) == len(a.prefixes) && len(input.suffixes) == len(a.suffixes) {
 				if len(input.infixes) == len(a.infixes) {
 					return true
@@ -167,6 +168,8 @@ func isDuplicateFix(fixes []string, fix string) (newFixes []string) {
 		fix = "äng"
 	} else if fix == "ep" {
 		fix = "äp"
+	} else if fix == "epeyk" {
+		fix = "äpeyk"
 	} else if fix == "ye" {
 		fix = "yä"
 	} else if fix == "e" {
@@ -244,6 +247,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 			input.word = validWord
 			if !isDuplicate(input) {
 				candidates = append(candidates, input)
+				candidateHash[input.word] = input
 			}
 			return candidates
 		}
@@ -256,12 +260,14 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 			input.word = "zenke"
 			if !isDuplicate(input) {
 				candidates = append(candidates, input)
+				candidateHash[input.word] = input
 			}
 			return candidates
 		}
 	}
 
 	candidates = append(candidates, input)
+	candidateHash[input.word] = input
 
 	// Add a way for e to become ä again if we're down to 1 syllable
 	if len([]rune(input.word)) < 8 && (len(input.prefixes) > 0 || len(input.infixes) > 0 || len(input.suffixes) > 0) { // could be tskxäpx (7 letters 1 syllable)
@@ -287,6 +293,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 			newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "tswo")
 			if !isDuplicate(newCandidate) {
 				candidates = append(candidates, newCandidate)
+				candidateHash[input.word] = input
 			}
 		}
 	}
@@ -332,6 +339,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 
 			if !isDuplicate(input) {
 				candidates = append(candidates, input)
+				candidateHash[input.word] = input
 			} // to bump the real candidate into recognition
 
 			if found {
@@ -348,6 +356,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 				}
 				if !isDuplicate(newCandidate) {
 					candidates = append(candidates, newCandidate)
+					candidateHash[input.word] = input
 				}
 			}
 			return candidates
@@ -775,6 +784,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 
 func deconjugate(input string) []ConjugationCandidate {
 	candidates = []ConjugationCandidate{} //empty array of strings
+	candidateHash = map[string]ConjugationCandidate{}
 	newCandidate := ConjugationCandidate{}
 	newCandidate.word = input
 	newCandidate.insistPOS = "any"
@@ -1019,6 +1029,21 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 					for _, newInfix := range candidate.infixes {
 						if implContainsAny(prefirst, []string{newInfix}) {
 							firstInfixes += newInfix
+							rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<0>", firstInfixes)
+							if newInfix == "epeyk" || newInfix == "äpeyk" {
+								newCandidateInfixes := []string{}
+								for _, newInfix2 := range candidate.infixes {
+									// äpeyk gets split
+									if newInfix2 == "epeyk" || newInfix2 == "äpeyk" {
+										newCandidateInfixes = append(newCandidateInfixes, "äp")
+										newCandidateInfixes = append(newCandidateInfixes, "eyk")
+									} else {
+										newCandidateInfixes = append(newCandidateInfixes, newInfix2)
+									}
+								}
+								a.Affixes.Infix = newCandidateInfixes
+							}
+							break
 						}
 					}
 					rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<0>", firstInfixes)
