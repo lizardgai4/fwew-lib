@@ -152,6 +152,8 @@ func clean(searchNaviWords string) (words string) {
 // The first word will only contain the query put into the translate command
 // One Navi-Word can have multiple meanings and words (e.g. synonyms)
 func TranslateFromNaviHash(searchNaviWords string, checkFixes bool) (results [][]Word, err error) {
+	universalLock.Lock()
+	defer universalLock.Unlock()
 	searchNaviWords = clean(searchNaviWords)
 
 	// No Results if empty string after removing sketch chars
@@ -605,6 +607,8 @@ func TranslateToNaviHash(searchWord string, langCode string) (results [][]Word) 
 }
 
 func TranslateToNaviHashHelper(searchWord string, langCode string) (results []Word) {
+	universalLock.Lock()
+	defer universalLock.Unlock()
 	results = []Word{}
 	switch langCode {
 	case "de": // German
@@ -843,6 +847,8 @@ func TranslateToNaviHashHelper(searchWord string, langCode string) (results []Wo
 // This will return a 2D array of Words, that fit the input text
 // One Word can have multiple meanings and words (e.g. synonyms)
 func BidirectionalSearch(searchNaviWords string, checkFixes bool, langCode string) (results [][]Word, err error) {
+	universalLock.Lock()
+	defer universalLock.Unlock()
 	searchNaviWords = clean(searchNaviWords)
 
 	// No Results if empty string after removing sketch chars
@@ -924,6 +930,8 @@ func Random(amount int, args []string, checkDigraphs uint8) (results []Word, err
 
 // Get all words with spaces
 func GetMultiwordWords() map[string][][]string {
+	universalLock.Lock()
+	defer universalLock.Unlock()
 	return multiword_words
 }
 
@@ -1287,6 +1295,7 @@ func ReefMe(ipa string, inter bool) []string {
 }
 
 func StartEverything() string {
+	universalLock.Lock()
 	start := time.Now()
 	var errors = []error{
 		AssureDict(),
@@ -1299,6 +1308,7 @@ func StartEverything() string {
 			log.Println(err)
 		}
 	}
+	universalLock.Unlock()
 	PhonemeDistros()
 	elapsed := strconv.FormatFloat(time.Since(start).Seconds(), 'f', -1, 64)
 

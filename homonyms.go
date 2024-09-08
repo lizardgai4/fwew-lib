@@ -6,6 +6,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,6 +24,19 @@ var lenitionMap = map[string]string{
 	"k":  "h",
 	"kx": "k",
 	"'":  "",
+}
+
+var checkAsyncLock = sync.WaitGroup{}
+
+type tempHomsContainer struct {
+	mu       sync.Mutex
+	counters []string
+}
+
+func (c *tempHomsContainer) addTempHom(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.counters = append(c.counters, name)
 }
 
 func DuplicateDetector(query string) bool {
@@ -377,18 +391,60 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
+func CheckHomsAsync(candidates []string, tempHoms *tempHomsContainer, word Word, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for _, a := range candidates {
+		results, err := TranslateFromNaviHash(a, true)
+		if err == nil && len(results) > 0 && len(results[0]) > 2 {
+
+			allNaviWords := ""
+			noDupes := []string{}
+			for i, b := range results[0] {
+				if i == 0 {
+					continue
+				}
+				dupe := false
+				for _, c := range noDupes {
+					if c == b.Navi {
+						dupe = true
+						break
+					}
+				}
+				if !dupe { //&& i < 3 {
+					noDupes = AppendStringAlphabetically(noDupes, b.Navi)
+				}
+			}
+
+			for _, b := range noDupes {
+				allNaviWords += b + " "
+			}
+
+			// No duplicates
+			if _, ok := homoMap[allNaviWords]; !ok {
+				homoMap[allNaviWords] = 1
+
+				if len(noDupes) > 1 {
+					fmt.Println(word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords)
+					tempHoms.addTempHom(a)
+				}
+			}
+		}
+	}
+}
+
 func StageThree() (err error) {
 	start := time.Now()
 
-	tempHoms := []string{}
+	tempHoms := tempHomsContainer{}
 
 	wordCount := 0
 
 	err = RunOnDict(func(word Word) error {
 		wordCount += 1
+		//checkAsyncLock.Wait()
 
 		// Progress counter
-		if wordCount%100 == 0 {
+		if wordCount%10 == 0 {
 			total_seconds := time.Since(start)
 
 			log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
@@ -422,57 +478,24 @@ func StageThree() (err error) {
 				candidates2 = append(candidates2, word.Navi)
 				reconjugate(word, false)
 			}
-
-			for _, a := range candidates2 {
-
-				results, err := TranslateFromNaviHash(a, true)
-				if err == nil && len(results) > 0 && len(results[0]) > 2 {
-
-					allNaviWords := ""
-					noDupes := []string{}
-					for i, b := range results[0] {
-						if i == 0 {
-							continue
-						}
-						dupe := false
-						for _, c := range noDupes {
-							if c == b.Navi {
-								dupe = true
-								break
-							}
-						}
-						if !dupe { //&& i < 3 {
-							noDupes = AppendStringAlphabetically(noDupes, b.Navi)
-						}
-					}
-
-					for _, b := range noDupes {
-						allNaviWords += b + " "
-					}
-
-					// No duplicates
-					if _, ok := homoMap[allNaviWords]; !ok {
-						homoMap[allNaviWords] = 1
-
-						if len(noDupes) > 1 {
-							fmt.Println(word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords)
-							tempHoms = append(tempHoms, a)
-						}
-					}
-				}
-			}
+			checkAsyncLock.Wait()
+			checkAsyncLock.Add(1)
+			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 		} else if strings.HasSuffix(word.Navi, " si") {
+			checkAsyncLock.Wait()
 			// "[word] si" can take the form "[word]tswo"
 			siTswo := strings.TrimSuffix(word.Navi, " si")
 			siTswo = siTswo + "tswo"
 			reconjugateNouns(word, siTswo, 0, 0, 0)
+			checkAsyncLock.Add(1)
+			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 		}
 
 		return nil
 	})
 
 	fmt.Println(homoMap)
-	fmt.Println(tempHoms)
+	fmt.Println(tempHoms.counters)
 
 	total_seconds := time.Since(start)
 
