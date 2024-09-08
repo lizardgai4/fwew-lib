@@ -444,7 +444,7 @@ func StageThree() (err error) {
 		//checkAsyncLock.Wait()
 
 		// Progress counter
-		if wordCount%10 == 0 {
+		if wordCount%100 == 0 {
 			total_seconds := time.Since(start)
 
 			log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
