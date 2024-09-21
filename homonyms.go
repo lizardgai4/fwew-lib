@@ -391,7 +391,7 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
-func CheckHomsAsync(candidates []string, tempHoms *tempHomsContainer, word Word, wg *sync.WaitGroup) {
+func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for _, a := range candidates {
 		results, err := TranslateFromNaviHash(a, true)
@@ -420,12 +420,11 @@ func CheckHomsAsync(candidates []string, tempHoms *tempHomsContainer, word Word,
 			}
 
 			// No duplicates
-			if _, ok := homoMap[allNaviWords]; !ok {
-				homoMap[allNaviWords] = 1
-
-				if len(noDupes) > 1 {
+			if len(noDupes) > 1 {
+				if _, ok := homoMap[allNaviWords]; !ok {
+					homoMap[allNaviWords] = 1
 					fmt.Println(word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords)
-					tempHoms.addTempHom(a)
+					*tempHoms = append(*tempHoms, a)
 				}
 			}
 		}
@@ -435,7 +434,7 @@ func CheckHomsAsync(candidates []string, tempHoms *tempHomsContainer, word Word,
 func StageThree() (err error) {
 	start := time.Now()
 
-	tempHoms := tempHomsContainer{}
+	tempHoms := []string{}
 
 	wordCount := 0
 
@@ -495,7 +494,7 @@ func StageThree() (err error) {
 	})
 
 	fmt.Println(homoMap)
-	fmt.Println(tempHoms.counters)
+	fmt.Println(tempHoms)
 
 	total_seconds := time.Since(start)
 

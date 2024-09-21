@@ -152,8 +152,8 @@ func clean(searchNaviWords string) (words string) {
 // The first word will only contain the query put into the translate command
 // One Navi-Word can have multiple meanings and words (e.g. synonyms)
 func TranslateFromNaviHash(searchNaviWords string, checkFixes bool) (results [][]Word, err error) {
-	universalLock.Lock()
-	defer universalLock.Unlock()
+	//universalLock.Lock()
+	//defer universalLock.Unlock()
 	searchNaviWords = clean(searchNaviWords)
 
 	// No Results if empty string after removing sketch chars
@@ -964,7 +964,7 @@ func is_vowel_ipa(letter string) (found bool) {
 }
 
 func dialectCrunch(query []string, guaranteedForest bool) []string {
-	newQuery := []string{}
+	/*newQuery := []string{}
 	for _, a := range query {
 		oldQuery := a
 		// When caching, we are guaranteed forest words and don't need anything in this block
@@ -1014,7 +1014,8 @@ func dialectCrunch(query []string, guaranteedForest bool) []string {
 		}
 		newQuery = append(newQuery, a)
 	}
-	return newQuery
+	return newQuery*/
+	return query
 }
 
 func ReefMe(ipa string, inter bool) []string {
