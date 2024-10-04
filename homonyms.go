@@ -25,6 +25,8 @@ var lenitionMap = map[string]string{
 	"kx": "k",
 	"'":  "",
 }
+var top10Longest = map[int]string{}
+var longest = 0
 
 var checkAsyncLock = sync.WaitGroup{}
 
@@ -276,6 +278,12 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 			candidates2 = append(candidates2, newWord)
 			candidates2Map[inputNavi] = 1
 			reconjugateNouns(input, newWord, prefixCheck, 5, -1)
+			fallthrough
+		case 5:
+			newWord := inputNavi + "sì"
+			candidates2 = append(candidates2, newWord)
+			candidates2Map[inputNavi] = 1
+			reconjugateNouns(input, newWord, prefixCheck, 6, -1)
 		}
 	}
 
@@ -337,7 +345,7 @@ func reconjugate(word Word, allowPrefixes bool) {
 			}
 		}
 		if found {
-			//fmt.Println(word.Navi)
+			candidates2 = append(candidates2, word.Navi)
 			reconjugateNouns(word, word.Navi, 0, 0, 0)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
@@ -351,24 +359,74 @@ func reconjugate(word Word, allowPrefixes bool) {
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
 			candidates2 = append(candidates2, "tsuk"+word.Navi)
+			candidates2 = append(candidates2, "suk"+word.Navi)
 			candidates2 = append(candidates2, "atsuk"+word.Navi)
 			candidates2 = append(candidates2, "tsuk"+word.Navi+"a")
 			candidates2 = append(candidates2, "ketsuk"+word.Navi)
+			candidates2 = append(candidates2, "hetsuk"+word.Navi)
 			candidates2 = append(candidates2, "aketsuk"+word.Navi)
 			candidates2 = append(candidates2, "ketsuk"+word.Navi+"a")
+			candidates2 = append(candidates2, "hetsuk"+word.Navi+"a")
+
+			//Lenited forms, too
+			found := false
+
+			for _, a := range lenitors {
+				if strings.HasPrefix(gerund, a) {
+					gerund = strings.TrimPrefix(gerund, a)
+					gerund = lenitionMap[a] + gerund
+					found = true
+					break
+				}
+			}
+			if found {
+				candidates2 = append(candidates2, gerund)
+				reconjugateNouns(word, gerund, 0, 0, 0)
+			}
 		}
 		// Ability to [verb]
 		candidates2 = append(candidates2, word.Navi+"tswo")
 		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0)
+		//Lenited forms, too
+		found := false
+
+		for _, a := range lenitors {
+			if strings.HasPrefix(word.Navi, a) {
+				word.Navi = strings.TrimPrefix(word.Navi, a)
+				word.Navi = lenitionMap[a] + word.Navi
+				found = true
+				break
+			}
+		}
+		if found {
+			candidates2 = append(candidates2, word.Navi+"tswo")
+			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0)
+		}
 
 	} else if word.PartOfSpeech == "adj." {
 		candidates2 = append(candidates2, word.Navi+"a")
 		candidates2Map[word.Navi+"a"] = 1
+
 		if allowPrefixes {
 			candidates2 = append(candidates2, "a"+word.Navi)
 			candidates2Map["a"+word.Navi] = 1
 			candidates2 = append(candidates2, "nì"+word.Navi)
 			candidates2Map["nì"+word.Navi] = 1
+		}
+
+		//Lenited forms, too
+		found := false
+		for _, a := range lenitors {
+			if strings.HasPrefix(word.Navi, a) {
+				word.Navi = strings.TrimPrefix(word.Navi, a)
+				word.Navi = lenitionMap[a] + word.Navi
+				found = true
+				break
+			}
+		}
+		if found {
+			candidates2 = append(candidates2, word.Navi+"a")
+			reconjugateNouns(word, word.Navi+"a", 0, 0, 0)
 		}
 	}
 }
@@ -428,6 +486,25 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 				}
 			}
 		}
+		/*if len(strings.Split(a, " ")) > 1 {
+			fmt.Println("oops " + a)
+			continue
+		}
+		runes := []rune(a)
+		runeCount := len(runes)
+		if runeCount < 40 {
+			continue
+		}
+		if runeCount > longest {
+			longest = runeCount
+			//fmt.Println(a)
+		}
+		if _, ok := top10Longest[runeCount]; ok {
+			top10Longest[runeCount] = top10Longest[runeCount] + " " + a
+			fmt.Println(a)
+		} else {
+			top10Longest[runeCount] = a
+		}*/
 	}
 }
 
@@ -479,6 +556,7 @@ func StageThree() (err error) {
 			}
 			checkAsyncLock.Wait()
 			checkAsyncLock.Add(1)
+			fmt.Println(len(candidates2))
 			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 		} else if strings.HasSuffix(word.Navi, " si") {
 			checkAsyncLock.Wait()
@@ -486,6 +564,22 @@ func StageThree() (err error) {
 			siTswo := strings.TrimSuffix(word.Navi, " si")
 			siTswo = siTswo + "tswo"
 			reconjugateNouns(word, siTswo, 0, 0, 0)
+			//Lenited forms, too
+			found := false
+			for _, a := range lenitors {
+				if strings.HasPrefix(siTswo, a) {
+					//fmt.Println(word.Navi)
+					siTswo = strings.TrimPrefix(siTswo, a)
+					siTswo = lenitionMap[a] + siTswo
+					found = true
+					break
+				}
+			}
+			if found {
+				//fmt.Println(word.Navi)
+				candidates2 = append(candidates2, siTswo)
+				reconjugateNouns(word, siTswo, 0, 0, 0)
+			}
 			checkAsyncLock.Add(1)
 			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 		}
@@ -514,4 +608,6 @@ func homonymSearch() {
 	fmt.Println("Stage 3:")
 	StageThree()
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
+	fmt.Println(longest)
+	fmt.Println(top10Longest[longest])
 }

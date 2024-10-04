@@ -964,7 +964,7 @@ func is_vowel_ipa(letter string) (found bool) {
 }
 
 func dialectCrunch(query []string, guaranteedForest bool) []string {
-	/*newQuery := []string{}
+	newQuery := []string{}
 	for _, a := range query {
 		oldQuery := a
 		// When caching, we are guaranteed forest words and don't need anything in this block
@@ -1014,8 +1014,8 @@ func dialectCrunch(query []string, guaranteedForest bool) []string {
 		}
 		newQuery = append(newQuery, a)
 	}
-	return newQuery*/
-	return query
+	return newQuery
+	//return query
 }
 
 func ReefMe(ipa string, inter bool) []string {
