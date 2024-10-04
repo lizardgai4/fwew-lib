@@ -556,7 +556,6 @@ func StageThree() (err error) {
 			}
 			checkAsyncLock.Wait()
 			checkAsyncLock.Add(1)
-			fmt.Println(len(candidates2))
 			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 		} else if strings.HasSuffix(word.Navi, " si") {
 			checkAsyncLock.Wait()
