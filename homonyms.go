@@ -266,18 +266,18 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 			reconjugateNouns(input, newWord, prefixCheck, 3, -1)
 			fallthrough
 		case 3:
+			newWord := inputNavi + "pe"
+			candidates2 = append(candidates2, newWord)
+			candidates2Map[inputNavi] = 1
+			reconjugateNouns(input, newWord, prefixCheck, 4, -1)
+			fallthrough
+		case 4:
 			for _, element := range adposuffixes {
 				newWord := inputNavi + element
 				candidates2 = append(candidates2, newWord)
 				candidates2Map[inputNavi] = 1
-				reconjugateNouns(input, newWord, prefixCheck, 4, -1)
+				reconjugateNouns(input, newWord, prefixCheck, 5, -1)
 			}
-			fallthrough
-		case 4:
-			newWord := inputNavi + "pe"
-			candidates2 = append(candidates2, newWord)
-			candidates2Map[inputNavi] = 1
-			reconjugateNouns(input, newWord, prefixCheck, 5, -1)
 			fallthrough
 		case 5:
 			newWord := inputNavi + "sì"
