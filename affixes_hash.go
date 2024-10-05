@@ -523,7 +523,6 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 
 				newCandidate := candidateDupe(input)
 				newCandidate.word = newString
-				newCandidate.insistPOS = "any"
 				newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
 				deconjugateHelper(newCandidate, newPrefixCheck, 1, unlenite, false, "", oldSuffix)
 			}
