@@ -226,7 +226,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 	}
 
 	// fneu checking for fne-'u
-	if len(lastPrefix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastPrefix, -1)) && is_vowel(nth_rune(input.word, 0)) {
+	if len(lastPrefix) > 0 && len(input.word) > 0 /*&& is_vowel(nth_rune(lastPrefix, -1))*/ && is_vowel(nth_rune(input.word, 0)) {
 		if !implContainsAny(prefixes1lenition, []string{lastPrefix}) { // do not do this for leniting prefixes
 			newCandidate := candidateDupe(input)
 			newCandidate.word = "'" + newCandidate.word
@@ -235,7 +235,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 	}
 
 	// fea checkeing for fe'a
-	if len(lastSuffix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastSuffix, 0)) && is_vowel(nth_rune(input.word, -1)) {
+	if len(lastSuffix) > 0 && len(input.word) > 0 /*&& is_vowel(nth_rune(lastSuffix, 0))*/ && is_vowel(nth_rune(input.word, -1)) {
 		newCandidate := candidateDupe(input)
 		newCandidate.word += "'"
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
@@ -895,9 +895,9 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							a.Affixes.Infix = candidate.infixes
 							a.Affixes.Suffix = candidate.suffixes
 							results = AppendAndAlphabetize(results, a)
-						} else if len(results) == 0 {
+						} /*else if len(results) == 0 {
 							results = AppendAndAlphabetize(results, infixError(searchNaviWord, "tì"+rebuiltVerb, c.IPA))
-						}
+						}*/
 					}
 				} else if candidate.insistPOS == "n." {
 					// n., pn., Prop.n. and inter. (but not vin.)
@@ -1080,7 +1080,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "errr", "er")
 						}
 
-						rebuiltVerbForest := rebuiltVerb
+						//rebuiltVerbForest := rebuiltVerb
 						rebuiltVerbArray := dialectCrunch(strings.Split(rebuiltVerb, " "), false)
 						rebuiltVerb = ""
 						for k, x := range rebuiltVerbArray {
@@ -1107,12 +1107,12 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							} else if rebuiltVerb[len(rebuiltVerb)-1] == '\'' && identicalRunes(rebuiltVerb[:len(rebuiltVerb)-1]+"a", rebuiltHyphen) {
 								// fp<us>e'a
 								results = AppendAndAlphabetize(results, a)
-							} else if firstInfixes == "us" {
+							} /* else if firstInfixes == "us" {
 								if len(results) == 0 {
 									results = AppendAndAlphabetize(results, infixError(searchNaviWord, rebuiltVerbForest, c.IPA))
 								}
-							}
-						} else if gerund { // ti is needed to weed out non-productive tì-verbs
+							}*/
+						} /*else if gerund { // ti is needed to weed out non-productive tì-verbs
 							if len(results) == 0 {
 								results = AppendAndAlphabetize(results, infixError(searchNaviWord, rebuiltVerbForest, c.IPA))
 							}
@@ -1120,7 +1120,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							if len(results) == 0 {
 								results = AppendAndAlphabetize(results, infixError(searchNaviWord, rebuiltVerbForest, c.IPA))
 							}
-						}
+						}*/
 					}
 				} else if candidate.insistPOS == "nì." {
 					posNoun := pos
