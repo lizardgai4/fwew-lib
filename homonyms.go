@@ -607,7 +607,7 @@ func homonymSearch() {
 	// Nothing would use more than 10 affixes on one word, so
 	// there is no performance difference between 10 and higher
 	// values.
-	StageThree(3)
+	StageThree(4)
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])

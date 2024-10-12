@@ -225,8 +225,21 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 		return candidates
 	}
 
+	/*if len(lastSuffix) > 0 {
+		newCandidate := candidateDupe(input)
+		newCandidate.word = newCandidate.word + string([]rune(lastSuffix)[0])
+		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+	}
+
+	if len(lastPrefix) > 0 {
+		newCandidate := candidateDupe(input)
+		prefixRunes := []rune(lastPrefix)
+		newCandidate.word = newCandidate.word + string(prefixRunes[len(prefixRunes)-1])
+		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+	}*/
+
 	// fneu checking for fne-'u
-	if len(lastPrefix) > 0 && len(input.word) > 0 /*&& is_vowel(nth_rune(lastPrefix, -1))*/ && is_vowel(nth_rune(input.word, 0)) {
+	if len(lastPrefix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastPrefix, -1)) && is_vowel(nth_rune(input.word, 0)) {
 		if !implContainsAny(prefixes1lenition, []string{lastPrefix}) { // do not do this for leniting prefixes
 			newCandidate := candidateDupe(input)
 			newCandidate.word = "'" + newCandidate.word
@@ -235,7 +248,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 	}
 
 	// fea checkeing for fe'a
-	if len(lastSuffix) > 0 && len(input.word) > 0 /*&& is_vowel(nth_rune(lastSuffix, 0))*/ && is_vowel(nth_rune(input.word, -1)) {
+	if len(lastSuffix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastSuffix, 0)) && is_vowel(nth_rune(input.word, -1)) {
 		newCandidate := candidateDupe(input)
 		newCandidate.word += "'"
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
