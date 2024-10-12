@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -447,6 +448,11 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 
 func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	sort.Slice(candidates, func(i, j int) bool {
+		return len([]rune(candidates[i])) < len([]rune(candidates[j]))
+	})
+
 	for _, a := range candidates {
 		results, err := TranslateFromNaviHash(a, true)
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
