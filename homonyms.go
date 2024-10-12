@@ -288,7 +288,7 @@ func reconjugateVerbs(inputNavi string, prefirstUsed bool, firstUsed bool, secon
 		candidates2 = append(candidates2, removeBrackets(inputNavi))
 		candidates2Map[inputNavi] = 1
 	}
-	
+
 	if !prefirstUsed {
 		reconjugateVerbs(strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed)
 		for _, a := range prefirst {
