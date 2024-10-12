@@ -159,7 +159,6 @@ func StageTwo() error {
 		found := false
 		for _, a := range lenitors {
 			if strings.HasPrefix(word.Navi, a) {
-				//fmt.Println(word.Navi)
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
 				found = true
@@ -167,7 +166,6 @@ func StageTwo() error {
 			}
 		}
 		if found {
-			//fmt.Println(word.Navi)
 			// If the word can conjugate into something else, record it
 			results, err := TranslateFromNaviHash(word.Navi, true)
 			if err == nil && len(results[0]) > 2 {
@@ -210,81 +208,67 @@ func StageTwo() error {
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
-func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8) error {
+func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8, first bool) error {
 	if _, ok := candidates2Map[inputNavi]; !ok {
-		switch prefixCheck {
-		case 0:
-			for _, element := range stemPrefixes {
-				// If it has a lenition-causing prefix
-				newWord := element + inputNavi
-				candidates2 = append(candidates2, newWord)
-				candidates2Map[inputNavi] = 1
-				reconjugateNouns(input, newWord, 1, suffixCheck, -1)
-			}
-			fallthrough
-		case 1:
-			fallthrough
-		case 2:
-			// Non-lenition prefixes for nouns only
-			for _, element := range prefixes1Nouns {
-				newWord := element + inputNavi
-				candidates2 = append(candidates2, newWord)
-				candidates2Map[inputNavi] = 1
-				reconjugateNouns(input, newWord, 4, suffixCheck, -1)
-			}
-			fallthrough
-		case 3:
-			// This one will demand this makes it use lenition
-			for _, element := range append(prefixes1lenition, "tsay") {
-				// If it has a lenition-causing prefix
-				newWord := element + inputNavi
-				candidates2 = append(candidates2, newWord)
-				candidates2Map[inputNavi] = 1
-				reconjugateNouns(input, newWord, 4, suffixCheck, -1)
-			}
-			fallthrough
-		case 4:
-			//fallthrough
+		candidates2 = append(candidates2, inputNavi)
+		candidates2Map[inputNavi] = 1
+	}
+	switch prefixCheck {
+	case 0:
+		for _, element := range stemPrefixes {
+			// If it has a lenition-causing prefix
+			newWord := element + inputNavi
+			reconjugateNouns(input, newWord, 1, suffixCheck, -1, false)
 		}
-
-		switch suffixCheck {
-		case 0: // -o "some"
-
-			fallthrough
-		case 1:
-			for _, element := range stemSuffixes {
-				newWord := inputNavi + element
-				candidates2 = append(candidates2, newWord)
-				candidates2Map[inputNavi] = 1
-				reconjugateNouns(input, newWord, prefixCheck, 2, -1)
-			}
-			fallthrough
-		case 2:
-			newWord := inputNavi + "o"
-			candidates2 = append(candidates2, newWord)
-			candidates2Map[inputNavi] = 1
-			reconjugateNouns(input, newWord, prefixCheck, 3, -1)
-			fallthrough
-		case 3:
-			newWord := inputNavi + "pe"
-			candidates2 = append(candidates2, newWord)
-			candidates2Map[inputNavi] = 1
-			reconjugateNouns(input, newWord, prefixCheck, 4, -1)
-			fallthrough
-		case 4:
-			for _, element := range adposuffixes {
-				newWord := inputNavi + element
-				candidates2 = append(candidates2, newWord)
-				candidates2Map[inputNavi] = 1
-				reconjugateNouns(input, newWord, prefixCheck, 5, -1)
-			}
-			fallthrough
-		case 5:
-			newWord := inputNavi + "sì"
-			candidates2 = append(candidates2, newWord)
-			candidates2Map[inputNavi] = 1
-			reconjugateNouns(input, newWord, prefixCheck, 6, -1)
+		fallthrough
+	case 1:
+		fallthrough
+	case 2:
+		// Non-lenition prefixes for nouns only
+		for _, element := range prefixes1Nouns {
+			newWord := element + inputNavi
+			reconjugateNouns(input, newWord, 4, suffixCheck, -1, false)
 		}
+		fallthrough
+	case 3:
+		// This one will demand this makes it use lenition
+		for _, element := range append(prefixes1lenition, "tsay") {
+			// If it has a lenition-causing prefix
+			newWord := element + inputNavi
+			reconjugateNouns(input, newWord, 4, suffixCheck, -1, false)
+		}
+		fallthrough
+	case 4:
+		//fallthrough
+	}
+
+	switch suffixCheck {
+	case 0: // -o "some"
+
+		fallthrough
+	case 1:
+		for _, element := range stemSuffixes {
+			newWord := inputNavi + element
+			reconjugateNouns(input, newWord, prefixCheck, 2, -1, false)
+		}
+		fallthrough
+	case 2:
+		newWord := inputNavi + "o"
+		reconjugateNouns(input, newWord, prefixCheck, 3, -1, false)
+		fallthrough
+	case 3:
+		newWord := inputNavi + "pe"
+		reconjugateNouns(input, newWord, prefixCheck, 4, -1, false)
+		fallthrough
+	case 4:
+		for _, element := range adposuffixes {
+			newWord := inputNavi + element
+			reconjugateNouns(input, newWord, prefixCheck, 5, -1, false)
+		}
+		fallthrough
+	case 5:
+		newWord := inputNavi + "sì"
+		reconjugateNouns(input, newWord, prefixCheck, 6, -1, false)
 	}
 
 	return nil
@@ -300,18 +284,24 @@ func removeBrackets(input string) string {
 
 // Helper for StageThree, based on reconstruct from affixes.go
 func reconjugateVerbs(inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool) error {
-	candidates2 = append(candidates2, removeBrackets(inputNavi))
-	candidates2Map[inputNavi] = 1
+	if _, ok := candidates2Map[inputNavi]; !ok {
+		candidates2 = append(candidates2, removeBrackets(inputNavi))
+		candidates2Map[inputNavi] = 1
+	}
+	
 	if !prefirstUsed {
+		reconjugateVerbs(strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed)
 		for _, a := range prefirst {
 			reconjugateVerbs(strings.ReplaceAll(inputNavi, "<0>", a), true, firstUsed, secondUsed)
 		}
 		reconjugateVerbs(strings.ReplaceAll(inputNavi, "<0>", "äpeyk"), true, firstUsed, secondUsed)
 	} else if !firstUsed {
+		reconjugateVerbs(strings.ReplaceAll(inputNavi, "<0>", ""), prefirstUsed, true, secondUsed)
 		for _, a := range first {
 			reconjugateVerbs(strings.ReplaceAll(inputNavi, "<1>", a), prefirstUsed, true, secondUsed)
 		}
 	} else if !secondUsed {
+		reconjugateVerbs(strings.ReplaceAll(inputNavi, "<2>", ""), prefirstUsed, firstUsed, true)
 		for _, a := range second {
 			reconjugateVerbs(strings.ReplaceAll(inputNavi, "<2>", a), prefirstUsed, firstUsed, true)
 		}
@@ -331,13 +321,12 @@ func reconjugate(word Word, allowPrefixes bool) {
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
-		reconjugateNouns(word, word.Navi, 0, 0, 0)
+		reconjugateNouns(word, word.Navi, 0, 0, 0, true)
 		//Lenited forms, too
 		found := false
 
 		for _, a := range lenitors {
 			if strings.HasPrefix(word.Navi, a) {
-				//fmt.Println(word.Navi)
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
 				found = true
@@ -346,7 +335,7 @@ func reconjugate(word Word, allowPrefixes bool) {
 		}
 		if found {
 			candidates2 = append(candidates2, word.Navi)
-			reconjugateNouns(word, word.Navi, 0, 0, 0)
+			reconjugateNouns(word, word.Navi, 0, 0, 0, true)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(word.InfixLocations, false, false, false)
@@ -355,7 +344,7 @@ func reconjugate(word Word, allowPrefixes bool) {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 			candidates2 = append(candidates2, gerund)
-			reconjugateNouns(word, gerund, 0, 0, 0)
+			reconjugateNouns(word, gerund, 0, 0, 0, true)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
 			candidates2 = append(candidates2, "tsuk"+word.Navi)
@@ -381,12 +370,12 @@ func reconjugate(word Word, allowPrefixes bool) {
 			}
 			if found {
 				candidates2 = append(candidates2, gerund)
-				reconjugateNouns(word, gerund, 0, 0, 0)
+				reconjugateNouns(word, gerund, 0, 0, 0, true)
 			}
 		}
 		// Ability to [verb]
 		candidates2 = append(candidates2, word.Navi+"tswo")
-		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0)
+		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, true)
 		//Lenited forms, too
 		found := false
 
@@ -400,7 +389,7 @@ func reconjugate(word Word, allowPrefixes bool) {
 		}
 		if found {
 			candidates2 = append(candidates2, word.Navi+"tswo")
-			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0)
+			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, true)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -426,7 +415,7 @@ func reconjugate(word Word, allowPrefixes bool) {
 		}
 		if found {
 			candidates2 = append(candidates2, word.Navi+"a")
-			reconjugateNouns(word, word.Navi+"a", 0, 0, 0)
+			reconjugateNouns(word, word.Navi+"a", 0, 0, 0, true)
 		}
 	}
 }
@@ -454,7 +443,6 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 	for _, a := range candidates {
 		results, err := TranslateFromNaviHash(a, true)
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
-
 			allNaviWords := ""
 			noDupes := []string{}
 			for i, b := range results[0] {
@@ -489,7 +477,7 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 		/*if len(strings.Split(a, " ")) > 1 {
 			fmt.Println("oops " + a)
 			continue
-		}
+		}*/
 		runes := []rune(a)
 		runeCount := len(runes)
 		if runeCount < 40 {
@@ -501,10 +489,9 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 		}
 		if _, ok := top10Longest[runeCount]; ok {
 			top10Longest[runeCount] = top10Longest[runeCount] + " " + a
-			fmt.Println(a)
 		} else {
 			top10Longest[runeCount] = a
-		}*/
+		}
 	}
 }
 
@@ -519,75 +506,73 @@ func StageThree() (err error) {
 		wordCount += 1
 		//checkAsyncLock.Wait()
 
-		// Progress counter
-		if wordCount%100 == 0 {
-			total_seconds := time.Since(start)
+		if wordCount >= 2300 {
+			// Progress counter
+			if wordCount%100 == 0 {
+				total_seconds := time.Since(start)
 
-			log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
-				strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
-				strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-				strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds")
-		}
-		// save original Navi word, we want to add "+" or "--" later again
-		//naviWord := word.Navi
+				log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
+					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
+					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds")
+			}
+			// save original Navi word, we want to add "+" or "--" later again
+			//naviWord := word.Navi
 
-		// No multiword words
-		if !strings.Contains(word.Navi, " ") {
-			candidates2 = []string{word.Navi} //empty array of strings
+			// No multiword words
+			if !strings.Contains(word.Navi, " ") {
+				candidates2 = []string{word.Navi} //empty array of strings
 
-			// Get conjugations
-			reconjugate(word, true)
+				// Get conjugations
+				reconjugate(word, true)
 
-			//Lenited forms, too
-			found := false
-			for _, a := range lenitors {
-				if strings.HasPrefix(word.Navi, a) {
-					//fmt.Println(word.Navi)
-					word.Navi = strings.TrimPrefix(word.Navi, a)
-					word.Navi = lenitionMap[a] + word.Navi
-					found = true
-					break
+				//Lenited forms, too
+				found := false
+				for _, a := range lenitors {
+					if strings.HasPrefix(word.Navi, a) {
+						word.Navi = strings.TrimPrefix(word.Navi, a)
+						word.Navi = lenitionMap[a] + word.Navi
+						found = true
+						break
+					}
 				}
-			}
-			if found {
-				//fmt.Println(word.Navi)
-				candidates2 = append(candidates2, word.Navi)
-				reconjugate(word, false)
-			}
-			checkAsyncLock.Wait()
-			checkAsyncLock.Add(1)
-			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
-		} else if strings.HasSuffix(word.Navi, " si") {
-			checkAsyncLock.Wait()
-			// "[word] si" can take the form "[word]tswo"
-			siTswo := strings.TrimSuffix(word.Navi, " si")
-			siTswo = siTswo + "tswo"
-			reconjugateNouns(word, siTswo, 0, 0, 0)
-			//Lenited forms, too
-			found := false
-			for _, a := range lenitors {
-				if strings.HasPrefix(siTswo, a) {
-					//fmt.Println(word.Navi)
-					siTswo = strings.TrimPrefix(siTswo, a)
-					siTswo = lenitionMap[a] + siTswo
-					found = true
-					break
+				if found {
+					candidates2 = append(candidates2, word.Navi)
+					reconjugate(word, false)
 				}
+				checkAsyncLock.Wait()
+				checkAsyncLock.Add(1)
+				go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
+			} else if strings.HasSuffix(word.Navi, " si") {
+				// "[word] si" can take the form "[word]tswo"
+				siTswo := strings.TrimSuffix(word.Navi, " si")
+				siTswo = siTswo + "tswo"
+				reconjugateNouns(word, siTswo, 0, 0, 0, true)
+				//Lenited forms, too
+				found := false
+				for _, a := range lenitors {
+					if strings.HasPrefix(siTswo, a) {
+						siTswo = strings.TrimPrefix(siTswo, a)
+						siTswo = lenitionMap[a] + siTswo
+						found = true
+						break
+					}
+				}
+				if found {
+					candidates2 = append(candidates2, siTswo)
+					reconjugateNouns(word, siTswo, 0, 0, 0, true)
+				}
+				checkAsyncLock.Wait()
+				checkAsyncLock.Add(1)
+				go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 			}
-			if found {
-				//fmt.Println(word.Navi)
-				candidates2 = append(candidates2, siTswo)
-				reconjugateNouns(word, siTswo, 0, 0, 0)
-			}
-			checkAsyncLock.Add(1)
-			go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
 		}
 
 		return nil
 	})
 
-	fmt.Println(homoMap)
-	fmt.Println(tempHoms)
+	//fmt.Println(homoMap)
+	//fmt.Println(tempHoms)
 
 	total_seconds := time.Since(start)
 
