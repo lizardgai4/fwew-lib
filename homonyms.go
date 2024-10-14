@@ -446,7 +446,7 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
-func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync.WaitGroup) {
+func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	sort.Slice(candidates, func(i, j int) bool {
@@ -457,7 +457,9 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 		results, err := TranslateFromNaviHash(a, true)
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 			allNaviWords := ""
+			allLengths := []int{}
 			noDupes := []string{}
+			atLeast3 := false
 			for i, b := range results[0] {
 				if i == 0 {
 					continue
@@ -471,6 +473,11 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 				}
 				if !dupe { //&& i < 3 {
 					noDupes = AppendStringAlphabetically(noDupes, b.Navi)
+					lengths := len(b.Affixes.Prefix) + len(b.Affixes.Suffix) + len(b.Affixes.Infix)
+					allLengths = append(allLengths, lengths)
+					if lengths >= minAffix {
+						atLeast3 = true
+					}
 				}
 			}
 
@@ -480,9 +487,17 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 
 			// No duplicates
 			if len(noDupes) > 1 {
+				allLengthsString := ""
+
 				if _, ok := homoMap[allNaviWords]; !ok {
+					for _, a := range allLengths {
+						allLengthsString += strconv.Itoa(a) + " "
+					}
+					allLengthsString = strings.TrimSuffix(allLengthsString, " ")
 					homoMap[allNaviWords] = 1
-					fmt.Println(word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords)
+					if atLeast3 {
+						fmt.Println(word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString)
+					}
 					*tempHoms = append(*tempHoms, a)
 				}
 			}
@@ -508,7 +523,7 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, wg *sync
 	}
 }
 
-func StageThree(affixLimit int8) (err error) {
+func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 	start := time.Now()
 
 	tempHoms := []string{}
@@ -519,7 +534,7 @@ func StageThree(affixLimit int8) (err error) {
 		wordCount += 1
 		//checkAsyncLock.Wait()
 
-		if wordCount >= 0 {
+		if wordCount >= startNumber {
 			// Progress counter
 			if wordCount%100 == 0 {
 				total_seconds := time.Since(start)
@@ -555,7 +570,7 @@ func StageThree(affixLimit int8) (err error) {
 				}
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
-				go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
+				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
 				siTswo := strings.TrimSuffix(word.Navi, " si")
@@ -577,7 +592,7 @@ func StageThree(affixLimit int8) (err error) {
 				}
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
-				go CheckHomsAsync(candidates2, &tempHoms, word, &checkAsyncLock)
+				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			}
 		}
 
@@ -603,11 +618,8 @@ func homonymSearch() {
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
-	// call this function with the number of affixes to limit to
-	// Nothing would use more than 10 affixes on one word, so
-	// there is no performance difference between 10 and higher
-	// values.
-	StageThree(4)
+	// minimum affixes, maximum affixes, start at word number N
+	StageThree(0, 3, 0)
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
