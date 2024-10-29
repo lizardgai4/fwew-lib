@@ -87,7 +87,7 @@ var adposuffixes = []string{
 	"kxamlä", "ìlä", "wä", //"genitive"
 	"teri", //"topical"
 	// Case endings
-	"ìl", "l", "it", "ti", "t", "ur", "ru", "r", "yä", "ä", "e", "ye", "ìri", "ri",
+	"ìl", "l", "it", "ti", "t", "ur", "ru", "r", "yä", "ä", "ìri", "ri",
 	// Sorted alphabetically by their reverse forms
 	"nemfa", "rofa", "ka", "fa", "na", "ta", "ya", //-a
 	"lisre", "pxisre", "sre", "luke", "ne", //-e
@@ -117,17 +117,17 @@ var verbSuffixes = []string{"tswo", "yu"}
 var infixes = map[rune][]string{
 	rune('a'): {"ay", "asy", "aly", "ary", "am", "alm", "arm", "ats", "awn"},
 	rune('ä'): {"äng", "äpeyk", "äp"},
-	rune('e'): {"epeyk", "ep", "er", "ei", "eiy", "eng", "eyk"},
+	rune('e'): {"er", "ei", "eiy", "eyk"},
 	rune('i'): {"iv", "ilv", "irv", "imv", "iyev"},
 	rune('ì'): {"ìy", "ìsy", "ìly", "ìry", "ìm", "ìlm", "ìrm", "ìyev"},
 	rune('o'): {"ol"},
 	rune('u'): {"us", "uy"},
 }
 
-var prefirst = []string{"äp", "äpeyk", "ep", "epeyk", "eyk"}
+var prefirst = []string{"äp", "äpeyk", "eyk"}
 var first = []string{"ay", "asy", "aly", "ary", "ìy", "ìsy", "ìly", "ìry", "ol", "er", "ìm",
 	"ìlm", "ìrm", "am", "alm", "arm", "ìyev", "iyev", "iv", "ilv", "irv", "imv", "us", "awn"}
-var second = []string{"ei", "eiy", "äng", "eng", "uy", "ats"}
+var second = []string{"ei", "eiy", "äng", "uy", "ats"}
 
 var weirdNounSuffixes = map[string]string{
 	// For "tsa" with case endings
