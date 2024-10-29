@@ -268,7 +268,36 @@ func reconjugateNouns(file *os.File, input Word, inputNavi string, prefixCheck i
 		reconjugateNouns(file, input, newWord, prefixCheck, 4, -1, affixCountdown-1)
 		fallthrough
 	case 4:
+		vowel := false
+		diphthong := false
+		consonant := true
+		lastRune := []rune(inputNavi)[0]
+		if is_vowel(string(lastRune)) {
+			vowel = true
+		} else if lastRune == 'y' || lastRune == 'w' {
+			diphthong = true
+		} else {
+			consonant = true
+		}
+
 		for _, element := range adposuffixes {
+			if vowel {
+				if implContainsAny([]string{element}, []string{"ìl", "it", "ur", "ìri"}) {
+					return nil
+				} else if element == "ä" && implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+					return nil
+				}
+			} else if diphthong {
+				if implContainsAny([]string{element}, []string{"l", "it", "ur", "ìri", "yä"}) {
+					return nil
+				}
+			} else if consonant {
+				if implContainsAny([]string{element}, []string{"l", "t", "r", "ri", "yä"}) {
+					return nil
+				} else if element == "ru" && lastRune != '\'' {
+					return nil
+				}
+			}
 			newWord := inputNavi + element
 			reconjugateNouns(file, input, newWord, prefixCheck, 5, -1, affixCountdown-1)
 		}
