@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -318,7 +319,7 @@ func reconjugateVerbs(inputNavi string, prefirstUsed bool, firstUsed bool, secon
 	return nil
 }
 
-func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
+func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) {
 	// remove "+" and "--", we want to be able to search with and without those!
 	word.Navi = strings.ReplaceAll(word.Navi, "+", "")
 	word.Navi = strings.ReplaceAll(word.Navi, "--", "")
@@ -326,6 +327,13 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 
 	if word.PartOfSpeech == "pn." {
 		candidates2 = append(candidates2, "nì"+word.Navi)
+	}
+
+	// Write a string to the file
+	_, err := file.WriteString(word.Navi + "\t100\n")
+	if err != nil {
+		fmt.Println("Error writing to file (0 affixes):", err)
+		return
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
@@ -402,11 +410,22 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 
 	} else if word.PartOfSpeech == "adj." {
 		candidates2 = append(candidates2, word.Navi+"a")
+		// Write a string to the file
+		_, err := file.WriteString(word.Navi + "a\t80\n")
+		if err != nil {
+			fmt.Println("Error writing to file (0 affixes):", err)
+			return
+		}
 		candidates2Map[word.Navi+"a"] = 1
 
 		if allowPrefixes {
 			candidates2 = append(candidates2, "a"+word.Navi)
 			candidates2Map["a"+word.Navi] = 1
+			_, err := file.WriteString("a" + word.Navi + "\t80\n")
+			if err != nil {
+				fmt.Println("Error writing to file (0 affixes):", err)
+				return
+			}
 			candidates2 = append(candidates2, "nì"+word.Navi)
 			candidates2Map["nì"+word.Navi] = 1
 		}
@@ -530,6 +549,13 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 	wordCount := 0
 
+	file, err := os.Create("conjugations.txt")
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer file.Close()
+
 	err = RunOnDict(func(word Word) error {
 		wordCount += 1
 		//checkAsyncLock.Wait()
@@ -619,7 +645,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 3, 0)
+	StageThree(3, 4, 0)
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
