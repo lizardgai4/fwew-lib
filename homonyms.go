@@ -471,13 +471,13 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		}
 
 	} else if word.PartOfSpeech == "adj." {
-		if _, ok := candidates2Map[word.Navi+"a"]; !ok {
+		if _, ok := candidates2Map[word.Navi+"a"]; !strings.HasSuffix(word.Navi, "a") && !ok {
 			candidates2 = append(candidates2, word.Navi+"a")
 			candidates2Map[word.Navi+"a"] = 1
 		}
 
 		if allowPrefixes {
-			if _, ok := candidates2Map["a"+word.Navi]; !ok {
+			if _, ok := candidates2Map["a"+word.Navi]; !strings.HasPrefix(word.Navi, "a") && !ok {
 				candidates2 = append(candidates2, "a"+word.Navi)
 				candidates2Map["a"+word.Navi] = 1
 			}
@@ -488,21 +488,16 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		}
 
 		//Lenited forms, too
-		found := false
 		for _, a := range lenitors {
 			if strings.HasPrefix(word.Navi, a) {
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
-				found = true
+				reconjugateNouns(word, word.Navi, 0, 0, 0, affixLimit)
+				if !strings.HasSuffix(word.Navi, "a") {
+					reconjugateNouns(word, word.Navi+"a", 0, 0, 0, affixLimit)
+				}
 				break
 			}
-		}
-		if found {
-			if _, ok := candidates2Map[word.Navi+"a"]; !ok {
-				candidates2 = append(candidates2, word.Navi+"a")
-				candidates2Map[word.Navi+"a"] = 1
-			}
-			reconjugateNouns(word, word.Navi+"a", 0, 0, 0, affixLimit)
 		}
 	}
 }
