@@ -223,7 +223,7 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 		for _, element := range stemPrefixes {
 			// If it has a lenition-causing prefix
 			newWord := element + inputNavi
-			reconjugateNouns(input, newWord, 1, suffixCheck, -1, affixCountdown-1)
+			reconjugateNouns(input, newWord, 1, suffixCheck, 0, affixCountdown-1)
 		}
 		fallthrough
 	case 1:
@@ -232,15 +232,28 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 		// Non-lenition prefixes for nouns only
 		for _, element := range prefixes1Nouns {
 			newWord := element + inputNavi
-			reconjugateNouns(input, newWord, 4, suffixCheck, -1, affixCountdown-1)
+			reconjugateNouns(input, newWord, 4, suffixCheck, 0, affixCountdown-1)
 		}
 		fallthrough
 	case 3:
 		// This one will demand this makes it use lenition
+		lenited := inputNavi
+		if unlenite != 0 {
+			for _, a := range lenitors {
+				if strings.HasPrefix(lenited, a) {
+					lenited = strings.TrimPrefix(lenited, a)
+					lenited = lenitionMap[a] + lenited
+					break
+				}
+			}
+		}
+
 		for _, element := range append(prefixes1lenition, "tsay") {
 			// If it has a lenition-causing prefix
-			newWord := element + inputNavi
-			reconjugateNouns(input, newWord, 4, suffixCheck, -1, affixCountdown-1)
+
+			// regardless of whether or not it's found
+			lenited = element + lenited
+			reconjugateNouns(input, lenited, 4, suffixCheck, -1, affixCountdown-1)
 		}
 		fallthrough
 	case 4:
@@ -254,16 +267,16 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 	case 1:
 		for _, element := range stemSuffixes {
 			newWord := inputNavi + element
-			reconjugateNouns(input, newWord, prefixCheck, 2, -1, affixCountdown-1)
+			reconjugateNouns(input, newWord, prefixCheck, 2, unlenite, affixCountdown-1)
 		}
 		fallthrough
 	case 2:
 		newWord := inputNavi + "o"
-		reconjugateNouns(input, newWord, prefixCheck, 3, -1, affixCountdown-1)
+		reconjugateNouns(input, newWord, prefixCheck, 3, unlenite, affixCountdown-1)
 		fallthrough
 	case 3:
 		newWord := inputNavi + "pe"
-		reconjugateNouns(input, newWord, prefixCheck, 4, -1, affixCountdown-1)
+		reconjugateNouns(input, newWord, prefixCheck, 4, unlenite, affixCountdown-1)
 		fallthrough
 	case 4:
 		vowel := false
@@ -313,12 +326,12 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 				}
 			}
 			newWord := inputNavi + element
-			reconjugateNouns(input, newWord, prefixCheck, 5, -1, affixCountdown-1)
+			reconjugateNouns(input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
 		}
 		fallthrough
 	case 5:
 		newWord := inputNavi + "sì"
-		reconjugateNouns(input, newWord, prefixCheck, 6, -1, affixCountdown-1)
+		reconjugateNouns(input, newWord, prefixCheck, 6, unlenite, affixCountdown-1)
 	}
 
 	return nil
@@ -399,7 +412,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				candidates2 = append(candidates2, word.Navi)
 				candidates2Map[word.Navi] = 1
 			}
-			reconjugateNouns(word, word.Navi, 0, 0, 0, affixLimit-1)
+			reconjugateNouns(word, word.Navi, 0, 0, -1, affixLimit-1)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(word.InfixLocations, false, false, false, affixLimit)
@@ -441,7 +454,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 					candidates2 = append(candidates2, gerund)
 					candidates2Map[gerund] = 1
 				}
-				reconjugateNouns(word, gerund, 0, 0, 0, affixLimit-1)
+				reconjugateNouns(word, gerund, 0, 0, -1, affixLimit-1)
 			}
 		}
 		// Ability to [verb]
@@ -467,7 +480,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				candidates2 = append(candidates2, word.Navi+"tswo")
 				candidates2Map[word.Navi+"tswo"] = 1
 			}
-			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit-2)
+			reconjugateNouns(word, word.Navi+"tswo", 0, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -666,7 +679,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 						candidates2 = append(candidates2, siTswo)
 						candidates2Map[siTswo] = 1
 					}
-					reconjugateNouns(word, siTswo, 0, 0, 0, affixLimit)
+					reconjugateNouns(word, siTswo, 0, 0, -1, affixLimit)
 				}
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
