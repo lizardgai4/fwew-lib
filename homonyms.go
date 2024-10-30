@@ -266,7 +266,52 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 		reconjugateNouns(input, newWord, prefixCheck, 4, -1, affixCountdown-1)
 		fallthrough
 	case 4:
+		vowel := false
+		diphthong := false
+		consonant := true
+		naviRunes := []rune(inputNavi)
+		lastRune := naviRunes[len(naviRunes)-1]
+		if is_vowel(string(lastRune)) {
+			vowel = true
+		} else if lastRune == 'y' || lastRune == 'w' {
+			diphthong = true
+		} else {
+			consonant = true
+		}
+
+		// This significantly reduces the amount of conjugations needed to check, about 20% of how many it would check otherwise
 		for _, element := range adposuffixes {
+			if vowel {
+				if implContainsAny([]string{element}, []string{"ìl", "it", "ur", "ìri"}) {
+					continue
+				} else if element == "ä" {
+					if !implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+						continue
+					}
+				} else if element == "yä" {
+					if implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+						continue
+					}
+				}
+			} else if diphthong {
+				if implContainsAny([]string{element}, []string{"l", "ìri", "yä"}) {
+					continue
+				} else if element == "it" {
+					if strings.HasSuffix(inputNavi, "ey") {
+						continue
+					}
+				} else if element == "ur" {
+					if strings.HasSuffix(inputNavi, "ew") {
+						continue
+					}
+				}
+			} else if consonant {
+				if implContainsAny([]string{element}, []string{"l", "t", "r", "ri", "yä"}) {
+					continue
+				} else if element == "ru" && lastRune != '\'' {
+					continue
+				}
+			}
 			newWord := inputNavi + element
 			reconjugateNouns(input, newWord, prefixCheck, 5, -1, affixCountdown-1)
 		}
