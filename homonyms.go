@@ -492,9 +492,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			if strings.HasPrefix(word.Navi, a) {
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
-				reconjugateNouns(word, word.Navi, 0, 0, 0, affixLimit)
+				candidates2 = append(candidates2, word.Navi)
+				candidates2Map[word.Navi] = 1
 				if !strings.HasSuffix(word.Navi, "a") {
-					reconjugateNouns(word, word.Navi+"a", 0, 0, 0, affixLimit)
+					candidates2 = append(candidates2, word.Navi+"a")
+					candidates2Map[word.Navi+"a"] = 1
 				}
 				break
 			}
