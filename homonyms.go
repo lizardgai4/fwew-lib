@@ -407,7 +407,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		if allowPrefixes {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
-			fmt.Println(gerund)
+
 			if _, ok := candidates2Map[gerund]; !ok {
 				candidates2 = append(candidates2, gerund)
 				candidates2Map[gerund] = 1
