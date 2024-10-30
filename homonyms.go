@@ -383,14 +383,14 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 	word.Navi = strings.ToLower(word.Navi)
 
 	if _, ok := candidates2Map[word.Navi]; !ok {
-		fileAppend(file, removeBrackets(word.Navi), 100)
+		fileAppend(file, removeBrackets(word.Navi), 100-((4-int(affixLimit))*20))
 		candidates2 = append(candidates2, removeBrackets(word.Navi))
 	}
 
 	if word.PartOfSpeech == "pn." {
 		if _, ok := candidates2Map["nì"+word.Navi]; !ok {
 			candidates2 = append(candidates2, "nì"+word.Navi)
-			fileAppend(file, "nì"+word.Navi, 80)
+			fileAppend(file, "nì"+word.Navi, 100-((4-int(affixLimit))*20))
 		}
 	}
 
@@ -409,7 +409,6 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 		}
 		if found {
 			candidates2 = append(candidates2, word.Navi)
-			fileAppend(file, word.Navi, 100)
 			reconjugateNouns(file, word, word.Navi, 0, 0, 1, affixLimit-1)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
@@ -454,7 +453,7 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 			}
 			if found {
 				candidates2 = append(candidates2, gerund)
-				reconjugateNouns(file, word, gerund, 0, 0, 1, affixLimit-2)
+				reconjugateNouns(file, word, gerund, 0, 0, 1, affixLimit-1)
 			}
 		}
 		// Ability to [verb]
@@ -473,36 +472,38 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 		}
 		if found {
 			candidates2 = append(candidates2, word.Navi+"tswo")
-			reconjugateNouns(file, word, word.Navi+"tswo", 0, 0, 1, affixLimit-2)
+			reconjugateNouns(file, word, word.Navi+"tswo", 0, 0, 1, affixLimit-1)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
-		candidates2 = append(candidates2, word.Navi+"a")
-		// Write a string to the file
-		fileAppend(file, word.Navi+"a", 80)
+		if !strings.HasSuffix(word.Navi, "a") {
+			candidates2 = append(candidates2, word.Navi+"a")
+			// Write a string to the file
+			fileAppend(file, word.Navi+"a", 80)
+		}
 
 		if allowPrefixes {
-			candidates2 = append(candidates2, "a"+word.Navi)
-			fileAppend(file, "a"+word.Navi, 80)
+			if !strings.HasPrefix(word.Navi, "a") {
+				candidates2 = append(candidates2, "a"+word.Navi)
+				fileAppend(file, "a"+word.Navi, 80)
+			}
 			candidates2 = append(candidates2, "nì"+word.Navi)
 			fileAppend(file, "nì"+word.Navi, 80)
 		}
 
 		//Lenited forms, too
-		found := false
 		for _, a := range lenitors {
 			if strings.HasPrefix(word.Navi, a) {
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
 				fileAppend(file, word.Navi, 80)
-				found = true
+				candidates2 = append(candidates2, word.Navi)
+				if !strings.HasSuffix(word.Navi, "a") {
+					fileAppend(file, word.Navi+"a", 60)
+					candidates2 = append(candidates2, word.Navi+"a")
+				}
 				break
 			}
-		}
-		if found {
-			fileAppend(file, word.Navi+"a", 60)
-			candidates2 = append(candidates2, word.Navi+"a")
-			reconjugateNouns(file, word, word.Navi+"a", 0, 0, 1, affixLimit-2)
 		}
 	}
 }
@@ -664,7 +665,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				// "[word] si" can take the form "[word]tswo"
 				siTswo := strings.TrimSuffix(word.Navi, " si")
 				siTswo = siTswo + "tswo"
-				reconjugateNouns(file, word, siTswo, 0, 0, 0, affixLimit)
+				reconjugateNouns(file, word, siTswo, 0, 0, 0, affixLimit-1)
 				//Lenited forms, too
 				found := false
 				for _, a := range lenitors {
@@ -677,7 +678,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				}
 				if found {
 					candidates2 = append(candidates2, siTswo)
-					reconjugateNouns(file, word, siTswo, 0, 0, 1, affixLimit-1)
+					reconjugateNouns(file, word, siTswo, 0, 0, 1, affixLimit-2)
 				}
 				//checkAsyncLock.Wait()
 				//checkAsyncLock.Add(1)
