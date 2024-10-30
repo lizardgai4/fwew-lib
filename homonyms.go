@@ -364,7 +364,7 @@ func reconjugateVerbs(file *os.File, inputNavi string, prefirstUsed bool, firstU
 
 func fileAppend(file *os.File, word string, weight int) {
 	// No duplicates
-	if _, ok := candidates2Map[word]; ok {
+	if _, ok := candidates2Map[strings.ToLower(word)]; ok {
 		return
 	}
 	// Write a string to the file
@@ -373,7 +373,7 @@ func fileAppend(file *os.File, word string, weight int) {
 		fmt.Println("Error writing to file (0 affixes):", err)
 		return
 	}
-	candidates2Map[word] = 1
+	candidates2Map[strings.ToLower(word)] = 1
 }
 
 func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) {
