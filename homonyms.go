@@ -208,7 +208,7 @@ func StageTwo() error {
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
-func reconjugateNouns(file *os.File, input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8, affixCountdown int8) error {
+func reconjugateNouns(file *os.File, input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int, affixCountdown int8) error {
 	// End state: Limit to 2 affixes per noun
 	if affixCountdown == 0 {
 		return nil
@@ -237,7 +237,7 @@ func reconjugateNouns(file *os.File, input Word, inputNavi string, prefixCheck i
 	case 3:
 		// This one will demand this makes it use lenition
 		lenited := inputNavi
-		if unlenite != 0 {
+		if unlenite == 0 {
 			for _, a := range lenitors {
 				if strings.HasPrefix(lenited, a) {
 					lenited = strings.TrimPrefix(lenited, a)
@@ -251,8 +251,8 @@ func reconjugateNouns(file *os.File, input Word, inputNavi string, prefixCheck i
 			// If it has a lenition-causing prefix
 
 			// regardless of whether or not it's found
-			lenited = element + lenited
-			reconjugateNouns(file, input, lenited, 4, suffixCheck, -1, affixCountdown-1)
+			lenited2 := element + lenited
+			reconjugateNouns(file, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
 		}
 		fallthrough
 	case 4:
@@ -691,7 +691,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				}
 				if found {
 					candidates2 = append(candidates2, siTswo)
-					reconjugateNouns(file, word, siTswo, 0, 0, 1, affixLimit-2)
+					reconjugateNouns(file, word, siTswo, 0, 0, -1, affixLimit-2)
 				}
 				//checkAsyncLock.Wait()
 				//checkAsyncLock.Add(1)
