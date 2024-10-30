@@ -390,8 +390,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			candidates2 = append(candidates2, word.Navi)
-			reconjugateNouns(word, word.Navi, 0, 0, 0, affixLimit)
+			if _, ok := candidates2Map[word.Navi]; !ok {
+				candidates2 = append(candidates2, word.Navi)
+				candidates2Map[word.Navi] = 1
+			}
+			reconjugateNouns(word, word.Navi, 0, 0, 0, affixLimit-1)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(word.InfixLocations, false, false, false, affixLimit)
@@ -399,8 +402,12 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		if allowPrefixes {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
-			candidates2 = append(candidates2, gerund)
-			reconjugateNouns(word, gerund, 0, 0, 0, affixLimit)
+			fmt.Println(gerund)
+			if _, ok := candidates2Map[gerund]; !ok {
+				candidates2 = append(candidates2, gerund)
+				candidates2Map[gerund] = 1
+			}
+			reconjugateNouns(word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
 			abilityVerbs := []string{"tsuk" + word.Navi, "suk" + word.Navi, "atsuk" + word.Navi,
@@ -425,8 +432,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				}
 			}
 			if found {
-				candidates2 = append(candidates2, gerund)
-				reconjugateNouns(word, gerund, 0, 0, 0, affixLimit)
+				if _, ok := candidates2Map[gerund]; !ok {
+					candidates2 = append(candidates2, gerund)
+					candidates2Map[gerund] = 1
+				}
+				reconjugateNouns(word, gerund, 0, 0, 0, affixLimit-1)
 			}
 		}
 		// Ability to [verb]
@@ -434,7 +444,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			candidates2 = append(candidates2, word.Navi+"tswo")
 			candidates2Map[word.Navi+"tswo"] = 1
 		}
-		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit)
+		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
 
 		//Lenited forms, too
 		found := false
@@ -452,7 +462,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				candidates2 = append(candidates2, word.Navi+"tswo")
 				candidates2Map[word.Navi+"tswo"] = 1
 			}
-			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit)
+			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -600,13 +610,13 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 		if wordCount >= startNumber {
 			// Progress counter
-			if wordCount%100 == 0 {
+			if wordCount%50 == 0 {
 				total_seconds := time.Since(start)
 
 				log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
 					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds")
+					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(len(candidates2Map)) + " conjugations checked")
 			}
 			// save original Navi word, we want to add "+" or "--" later again
 			//naviWord := word.Navi
