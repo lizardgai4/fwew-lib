@@ -370,7 +370,10 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 	word.Navi = strings.ToLower(word.Navi)
 
 	if word.PartOfSpeech == "pn." {
-		candidates2 = append(candidates2, "nì"+word.Navi)
+		if _, ok := candidates2Map["nì"+word.Navi]; !ok {
+			candidates2 = append(candidates2, "nì"+word.Navi)
+			candidates2Map["nì"+word.Navi] = 1
+		}
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
@@ -400,15 +403,15 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			reconjugateNouns(word, gerund, 0, 0, 0, affixLimit)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
-			candidates2 = append(candidates2, "tsuk"+word.Navi)
-			candidates2 = append(candidates2, "suk"+word.Navi)
-			candidates2 = append(candidates2, "atsuk"+word.Navi)
-			candidates2 = append(candidates2, "tsuk"+word.Navi+"a")
-			candidates2 = append(candidates2, "ketsuk"+word.Navi)
-			candidates2 = append(candidates2, "hetsuk"+word.Navi)
-			candidates2 = append(candidates2, "aketsuk"+word.Navi)
-			candidates2 = append(candidates2, "ketsuk"+word.Navi+"a")
-			candidates2 = append(candidates2, "hetsuk"+word.Navi+"a")
+			abilityVerbs := []string{"tsuk" + word.Navi, "suk" + word.Navi, "atsuk" + word.Navi,
+				"tsuk" + word.Navi + "a", "ketsuk" + word.Navi, "hetsuk" + word.Navi, "aketsuk" + word.Navi,
+				"ketsuk" + word.Navi + "a", "hetsuk" + word.Navi + "a"}
+			for _, a := range abilityVerbs {
+				if _, ok := candidates2Map[a]; !ok {
+					candidates2 = append(candidates2, a)
+					candidates2Map[a] = 1
+				}
+			}
 
 			//Lenited forms, too
 			found := false
@@ -427,8 +430,12 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		// Ability to [verb]
-		candidates2 = append(candidates2, word.Navi+"tswo")
+		if _, ok := candidates2Map[word.Navi+"tswo"]; !ok {
+			candidates2 = append(candidates2, word.Navi+"tswo")
+			candidates2Map[word.Navi+"tswo"] = 1
+		}
 		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit)
+
 		//Lenited forms, too
 		found := false
 
@@ -441,19 +448,28 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			candidates2 = append(candidates2, word.Navi+"tswo")
+			if _, ok := candidates2Map[word.Navi+"tswo"]; !ok {
+				candidates2 = append(candidates2, word.Navi+"tswo")
+				candidates2Map[word.Navi+"tswo"] = 1
+			}
 			reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
-		candidates2 = append(candidates2, word.Navi+"a")
-		candidates2Map[word.Navi+"a"] = 1
+		if _, ok := candidates2Map[word.Navi+"a"]; !ok {
+			candidates2 = append(candidates2, word.Navi+"a")
+			candidates2Map[word.Navi+"a"] = 1
+		}
 
 		if allowPrefixes {
-			candidates2 = append(candidates2, "a"+word.Navi)
-			candidates2Map["a"+word.Navi] = 1
-			candidates2 = append(candidates2, "nì"+word.Navi)
-			candidates2Map["nì"+word.Navi] = 1
+			if _, ok := candidates2Map["a"+word.Navi]; !ok {
+				candidates2 = append(candidates2, "a"+word.Navi)
+				candidates2Map["a"+word.Navi] = 1
+			}
+			if _, ok := candidates2Map["nì"+word.Navi]; !ok {
+				candidates2 = append(candidates2, "nì"+word.Navi)
+				candidates2Map["nì"+word.Navi] = 1
+			}
 		}
 
 		//Lenited forms, too
@@ -467,7 +483,10 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			candidates2 = append(candidates2, word.Navi+"a")
+			if _, ok := candidates2Map[word.Navi+"a"]; !ok {
+				candidates2 = append(candidates2, word.Navi+"a")
+				candidates2Map[word.Navi+"a"] = 1
+			}
 			reconjugateNouns(word, word.Navi+"a", 0, 0, 0, affixLimit)
 		}
 	}
@@ -664,7 +683,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(3, 4, 0)
+	StageThree(0, 127, 0)
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
