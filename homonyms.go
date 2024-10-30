@@ -214,7 +214,7 @@ func reconjugateNouns(file *os.File, input Word, inputNavi string, prefixCheck i
 		return nil
 	}
 	if _, ok := candidates2Map[inputNavi]; !ok {
-		fileAppend(file, inputNavi, 100-((4-int(affixCountdown))*20))
+		fileAppend(file, inputNavi, 100-((3-int(affixCountdown))*20))
 		candidates2 = append(candidates2, inputNavi)
 	}
 	switch prefixCheck {
@@ -337,7 +337,7 @@ func reconjugateVerbs(file *os.File, inputNavi string, prefirstUsed bool, firstU
 		return nil
 	}
 	if _, ok := candidates2Map[inputNavi]; !ok {
-		fileAppend(file, removeBrackets(inputNavi), 100-((4-int(affixLimit))*20))
+		fileAppend(file, removeBrackets(inputNavi), 100-((3-int(affixLimit))*20))
 		candidates2 = append(candidates2, removeBrackets(inputNavi))
 	}
 
@@ -383,14 +383,14 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 	word.Navi = strings.ToLower(word.Navi)
 
 	if _, ok := candidates2Map[word.Navi]; !ok {
-		fileAppend(file, removeBrackets(word.Navi), 100-((4-int(affixLimit))*20))
+		fileAppend(file, removeBrackets(word.Navi), 100-((3-int(affixLimit))*20))
 		candidates2 = append(candidates2, removeBrackets(word.Navi))
 	}
 
 	if word.PartOfSpeech == "pn." {
 		if _, ok := candidates2Map["nì"+word.Navi]; !ok {
 			candidates2 = append(candidates2, "nì"+word.Navi)
-			fileAppend(file, "nì"+word.Navi, 100-((4-int(affixLimit))*20))
+			fileAppend(file, "nì"+word.Navi, 100-((3-int(affixLimit))*20))
 		}
 	}
 
@@ -458,7 +458,7 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 		}
 		// Ability to [verb]
 		candidates2 = append(candidates2, word.Navi+"tswo")
-		reconjugateNouns(file, word, word.Navi+"tswo", 0, 0, 0, affixLimit)
+		reconjugateNouns(file, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
 		//Lenited forms, too
 		found := false
 
@@ -472,7 +472,7 @@ func reconjugate(file *os.File, word Word, allowPrefixes bool, affixLimit int8) 
 		}
 		if found {
 			candidates2 = append(candidates2, word.Navi+"tswo")
-			reconjugateNouns(file, word, word.Navi+"tswo", 0, 0, 1, affixLimit-1)
+			reconjugateNouns(file, word, word.Navi+"tswo", 0, 0, 1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
