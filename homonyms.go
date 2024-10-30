@@ -252,8 +252,8 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 			// If it has a lenition-causing prefix
 
 			// regardless of whether or not it's found
-			lenited = element + lenited
-			reconjugateNouns(input, lenited, 4, suffixCheck, -1, affixCountdown-1)
+			lenited2 := element + lenited
+			reconjugateNouns(input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
 		}
 		fallthrough
 	case 4:
@@ -625,7 +625,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 		if wordCount >= startNumber {
 			// Progress counter
-			if wordCount%25 == 0 {
+			if wordCount%100 == 0 {
 				total_seconds := time.Since(start)
 
 				log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
@@ -710,7 +710,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 127, 0)
+	StageThree(0, 3, 0)
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
