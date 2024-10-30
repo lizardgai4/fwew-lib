@@ -369,6 +369,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 	word.Navi = strings.ReplaceAll(word.Navi, "--", "")
 	word.Navi = strings.ToLower(word.Navi)
 
+	if _, ok := candidates2Map[word.Navi]; !ok {
+		candidates2 = append(candidates2, word.Navi)
+		candidates2Map[word.Navi] = 1
+	}
+
 	if word.PartOfSpeech == "pn." {
 		if _, ok := candidates2Map["nì"+word.Navi]; !ok {
 			candidates2 = append(candidates2, "nì"+word.Navi)
@@ -610,7 +615,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 		if wordCount >= startNumber {
 			// Progress counter
-			if wordCount%50 == 0 {
+			if wordCount%25 == 0 {
 				total_seconds := time.Since(start)
 
 				log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
@@ -639,7 +644,6 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 					}
 				}
 				if found {
-					candidates2 = append(candidates2, word.Navi)
 					reconjugate(word, false, affixLimit)
 				}
 				checkAsyncLock.Wait()
@@ -661,7 +665,10 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 					}
 				}
 				if found {
-					candidates2 = append(candidates2, siTswo)
+					if _, ok := candidates2Map[siTswo]; !ok {
+						candidates2 = append(candidates2, siTswo)
+						candidates2Map[siTswo] = 1
+					}
 					reconjugateNouns(word, siTswo, 0, 0, 0, affixLimit)
 				}
 				checkAsyncLock.Wait()
