@@ -306,6 +306,7 @@ func reconjugate(word Word, allowPrefixes bool) {
 
 	if word.PartOfSpeech == "pn." {
 		candidates2 = append(candidates2, "nì"+word.Navi)
+		candidates2Map["nì"+word.Navi] = 1
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
@@ -332,14 +333,21 @@ func reconjugate(word Word, allowPrefixes bool) {
 		if allowPrefixes {
 			// Gerunds
 			candidates2 = append(candidates2, removeBrackets("tì"+strings.ReplaceAll(word.InfixLocations, "<1>", "us")))
+			candidates2Map["tì"+strings.ReplaceAll(word.InfixLocations, "<1>", "us")] = 1
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
 			candidates2 = append(candidates2, "tsuk"+word.Navi)
+			candidates2Map["tsuk"+word.Navi] = 1
 			candidates2 = append(candidates2, "atsuk"+word.Navi)
+			candidates2Map["atsuk"+word.Navi] = 1
 			candidates2 = append(candidates2, "tsuk"+word.Navi+"a")
+			candidates2Map["tsuk"+word.Navi+"a"] = 1
 			candidates2 = append(candidates2, "ketsuk"+word.Navi)
+			candidates2Map["ketsuk"+word.Navi] = 1
 			candidates2 = append(candidates2, "aketsuk"+word.Navi)
+			candidates2Map["aketsuk"+word.Navi] = 1
 			candidates2 = append(candidates2, "ketsuk"+word.Navi+"a")
+			candidates2Map["ketsuk"+word.Navi+"a"] = 1
 		}
 		// Ability to [verb]
 		candidates2 = append(candidates2, word.Navi+"tswo")
@@ -416,7 +424,7 @@ func StageThree() (err error) {
 				reconjugate(word, false)
 			}
 
-			for _, a := range candidates2 {
+			/*for _, a := range candidates2 {
 
 				results, err := TranslateFromNaviHash(a, true)
 				if err == nil && len(results) > 0 && len(results[0]) > 2 {
@@ -453,7 +461,7 @@ func StageThree() (err error) {
 						}
 					}
 				}
-			}
+			}*/
 
 		}
 
