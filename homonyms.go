@@ -112,7 +112,7 @@ func StageOne() error {
 	i := len(tempHoms)
 	for i > 0 {
 		i--
-		homonymsArray[0] += tempHoms[i] + " "
+		homonymsArray[0] += tempHoms[i] + "000 "
 	}
 
 	homonymsArray[0] = strings.TrimSuffix(homonymsArray[0], " ")
@@ -123,6 +123,27 @@ func StageOne() error {
 	}
 
 	return nil
+}
+
+// Helper to detect presences of affixes
+func AffixCount(word Word) string {
+	prefixCount := "0"
+	infixCount := "0"
+	suffixCount := "0"
+
+	if len(word.Affixes.Prefix) > 0 {
+		prefixCount = "1"
+	}
+	if len(word.Affixes.Infix) > 0 {
+		infixCount = "1"
+	}
+	if len(word.Affixes.Suffix) > 0 {
+		suffixCount = "1"
+	}
+
+	//fmt.Println(prefixCount + infixCount + suffixCount)
+
+	return prefixCount + infixCount + suffixCount
 }
 
 // Helper to turn a string into a list of known words
@@ -143,8 +164,8 @@ func StageTwo() error {
 			allNaviWords := ""
 			for i, a := range results[0] {
 				if i != 0 { //&& i < 3 {
-					tempHoms = append(tempHoms, a.Navi)
-					homList = AppendStringAlphabetically(homList, a.Navi)
+					tempHoms = append(tempHoms, a.Navi+AffixCount(a))
+					homList = AppendStringAlphabetically(homList, a.Navi+AffixCount(a))
 				}
 			}
 
@@ -173,8 +194,8 @@ func StageTwo() error {
 				allNaviWords := ""
 				for i, a := range results[0] {
 					if i != 0 { //&& i < 3 {
-						tempHoms = append(tempHoms, a.Navi)
-						allNaviWords += a.Navi + " "
+						tempHoms = append(tempHoms, a.Navi+AffixCount(a))
+						allNaviWords += a.Navi + AffixCount(a) + " "
 					}
 				}
 
@@ -561,7 +582,7 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, minAffix
 					}
 				}
 				if !dupe { //&& i < 3 {
-					noDupes = AppendStringAlphabetically(noDupes, b.Navi)
+					noDupes = AppendStringAlphabetically(noDupes, b.Navi+AffixCount(b))
 					lengths := len(b.Affixes.Prefix) + len(b.Affixes.Suffix) + len(b.Affixes.Infix)
 					allLengths = append(allLengths, lengths)
 					if lengths >= minAffix {
@@ -710,7 +731,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 3, 0)
+	StageThree(0, 4, 0)
 	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
