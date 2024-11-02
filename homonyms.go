@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -556,7 +557,7 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
-func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
+func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	sort.Slice(candidates, func(i, j int) bool {
@@ -576,7 +577,7 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, minAffix
 				}
 				dupe := false
 				for _, c := range noDupes {
-					if c == b.Navi {
+					if c == b.Navi+AffixCount(b) {
 						dupe = true
 						break
 					}
@@ -606,7 +607,13 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, minAffix
 					allLengthsString = strings.TrimSuffix(allLengthsString, " ")
 					homoMap[allNaviWords] = 1
 					if atLeast3 {
-						fmt.Println(word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString)
+						stringy := word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString
+						fmt.Println(stringy)
+						_, err := file.WriteString(stringy + "\n")
+						if err != nil {
+							fmt.Println("Error writing to file:", err)
+							return
+						}
 					}
 					*tempHoms = append(*tempHoms, a)
 				}
@@ -635,6 +642,14 @@ func CheckHomsAsync(candidates []string, tempHoms *[]string, word Word, minAffix
 
 func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 	start := time.Now()
+
+	file, err := os.Create("results.txt")
+	if err != nil {
+		fmt.Println("error opening file:", err)
+		return
+	}
+
+	defer file.Close()
 
 	tempHoms := []string{}
 
@@ -679,7 +694,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				}
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
-				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
+				go CheckHomsAsync(file, candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
 				siTswo := strings.TrimSuffix(word.Navi, " si")
@@ -704,7 +719,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				}
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
-				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
+				go CheckHomsAsync(file, candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			}
 		}
 

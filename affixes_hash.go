@@ -225,7 +225,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 		return candidates
 	}
 
-	/*if len(lastSuffix) > 0 {
+	if len(lastSuffix) > 0 {
 		newCandidate := candidateDupe(input)
 		newCandidate.word = newCandidate.word + string([]rune(lastSuffix)[0])
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
@@ -236,7 +236,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 		prefixRunes := []rune(lastPrefix)
 		newCandidate.word = newCandidate.word + string(prefixRunes[len(prefixRunes)-1])
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-	}*/
+	}
 
 	// fneu checking for fne-'u
 	if len(lastPrefix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastPrefix, -1)) && is_vowel(nth_rune(input.word, 0)) {
