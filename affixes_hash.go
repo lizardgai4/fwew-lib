@@ -234,7 +234,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 	if len(lastPrefix) > 0 {
 		newCandidate := candidateDupe(input)
 		prefixRunes := []rune(lastPrefix)
-		newCandidate.word = newCandidate.word + string(prefixRunes[len(prefixRunes)-1])
+		newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
 	}
 
