@@ -609,8 +609,19 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 				}
 			}
 
+			//containsNasal := false
+
 			for _, b := range noDupes {
 				allNaviWords += b + " "
+				// Nasal assimilation stuff
+				/*if !containsNasal {
+					for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
+						if strings.Contains(b, "n"+t) || strings.Contains(b, t+"n") {
+							containsNasal = true
+							break
+						}
+					}
+				}*/
 			}
 
 			// No duplicates
@@ -623,7 +634,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 					}
 					allLengthsString = strings.TrimSuffix(allLengthsString, " ")
 					homoMap[allNaviWords] = 1
-					if atLeast3 {
+					if atLeast3 { // && containsNasal {
 						stringy := word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString
 						fmt.Println(stringy)
 						_, err := file.WriteString(stringy + "\n")
