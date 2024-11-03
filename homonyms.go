@@ -672,6 +672,8 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 	wordCount := 0
 
+	file.WriteString("Stage 3\n")
+
 	err = RunOnDict(func(word Word) error {
 		wordCount += 1
 		//checkAsyncLock.Wait()
@@ -681,10 +683,13 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 			if wordCount%100 == 0 {
 				total_seconds := time.Since(start)
 
-				log.Printf("On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
+				printMessage := "On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
 					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(len(candidates2Map)) + " conjugations checked")
+					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(len(candidates2Map)) + " conjugations checked"
+
+				log.Printf(printMessage)
+				file.WriteString(printMessage + "\n")
 			}
 			// save original Navi word, we want to add "+" or "--" later again
 			//naviWord := word.Navi
