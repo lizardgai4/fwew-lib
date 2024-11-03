@@ -162,20 +162,37 @@ func StageTwo() error {
 		// If the word can conjugate into something else, record it
 		results, err := TranslateFromNaviHash(standardizedWord, true)
 		if err == nil && len(results[0]) > 2 {
+			dupes := []string{}
+
 			allNaviWords := ""
 			for i, a := range results[0] {
 				if i != 0 { //&& i < 3 {
+					dupe := false
+					dupeToFind := a.Navi + AffixCount(a)
+					for _, b := range dupes {
+						if b == dupeToFind {
+							dupe = true
+							break
+						}
+					}
+					if dupe {
+						continue
+					}
+
+					dupes = append(dupes, dupeToFind)
 					tempHoms = append(tempHoms, a.Navi+AffixCount(a))
 					homList = AppendStringAlphabetically(homList, a.Navi+AffixCount(a))
 				}
 			}
 
-			for _, a := range homList {
-				allNaviWords += a + " "
-			}
+			if len(homList) >= 2 {
+				for _, a := range homList {
+					allNaviWords += a + " "
+				}
 
-			homoMap[allNaviWords] = 1
-			fmt.Println(strconv.Itoa(len(results[0])) + " " + allNaviWords + " " + standardizedWord)
+				homoMap[allNaviWords] = 1
+				fmt.Println(strconv.Itoa(len(results[0])) + " " + allNaviWords + " " + standardizedWord)
+			}
 		}
 
 		//Lenited forms, too
