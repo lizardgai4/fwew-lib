@@ -225,15 +225,18 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 		return candidates
 	}
 
-	if len(lastSuffix) > 0 {
+	suffixRunes := []rune(lastSuffix)
+
+	if len(suffixRunes) > 1 && is_vowel(string(suffixRunes[0])) {
 		newCandidate := candidateDupe(input)
-		newCandidate.word = newCandidate.word + string([]rune(lastSuffix)[0])
+		newCandidate.word = newCandidate.word + string(suffixRunes[0])
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
 	}
 
-	if len(lastPrefix) > 0 {
+	prefixRunes := []rune(lastPrefix)
+
+	if len(prefixRunes) > 1 && is_vowel(string(prefixRunes[len(prefixRunes)-1])) {
 		newCandidate := candidateDupe(input)
-		prefixRunes := []rune(lastPrefix)
 		newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
 	}
