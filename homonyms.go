@@ -609,19 +609,23 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 				}
 			}
 
-			//containsNasal := false
+			// Nasal assimilation stuff
+			/*containsNasal := false
+
+			for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
+				for _, n := range []string{"n", "ng", "m"} {
+					if strings.Contains(a, n+t) || strings.Contains(a, t+n) {
+						containsNasal = true
+						break
+					}
+				}
+				if containsNasal {
+					break
+				}
+			}*/
 
 			for _, b := range noDupes {
 				allNaviWords += b + " "
-				// Nasal assimilation stuff
-				/*if !containsNasal {
-					for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
-						if strings.Contains(b, "n"+t) || strings.Contains(b, t+"n") {
-							containsNasal = true
-							break
-						}
-					}
-				}*/
 			}
 
 			// No duplicates
@@ -764,9 +768,15 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 	total_seconds := time.Since(start)
 
-	log.Printf("Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+	finalString := "Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 		strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-		strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds")
+		strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds"
+	log.Printf(finalString)
+	file.WriteString(finalString)
+
+	checkedString := "Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations"
+	fmt.Println(checkedString)
+	file.WriteString(checkedString)
 
 	return
 }
@@ -780,7 +790,7 @@ func homonymSearch() {
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
 	StageThree(0, 4, 0)
-	fmt.Println("Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations")
+
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
 }
