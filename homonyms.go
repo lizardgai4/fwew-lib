@@ -464,6 +464,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				candidates2 = append(candidates2, gerund)
 				candidates2Map[gerund] = 1
 			}
+
 			reconjugateNouns(word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
@@ -582,7 +583,27 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 	})
 
 	for _, a := range candidates {
+
+		//Nasal assimilation stuff
+		/*containsNasal := false
+
+		for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
+			for _, n := range []string{"n", "ng", "m"} {
+				if strings.Contains(a, n+t) || strings.Contains(a, t+n) {
+					containsNasal = true
+					break
+				}
+			}
+			if containsNasal {
+				break
+			}
+		}
+
+		if !containsNasal {
+			continue
+		}*/
 		results, err := TranslateFromNaviHash(a, true)
+
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 			allNaviWords := ""
 			allLengths := []int{}
@@ -609,21 +630,6 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 				}
 			}
 
-			// Nasal assimilation stuff
-			/*containsNasal := false
-
-			for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
-				for _, n := range []string{"n", "ng", "m"} {
-					if strings.Contains(a, n+t) || strings.Contains(a, t+n) {
-						containsNasal = true
-						break
-					}
-				}
-				if containsNasal {
-					break
-				}
-			}*/
-
 			for _, b := range noDupes {
 				allNaviWords += b + " "
 			}
@@ -638,7 +644,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 					}
 					allLengthsString = strings.TrimSuffix(allLengthsString, " ")
 					homoMap[allNaviWords] = 1
-					if atLeast3 { // && containsNasal {
+					if atLeast3 {
 						stringy := word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString
 						fmt.Println(stringy)
 						_, err := file.WriteString(stringy + "\n")
@@ -789,7 +795,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 4, 0)
+	StageThree(0, 127, 28)
 
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])

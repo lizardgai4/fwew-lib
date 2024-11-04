@@ -1017,11 +1017,11 @@ func dialectCrunch(query []string, guaranteedForest bool) []string {
 			if strings.HasSuffix(a, numberI) {
 				a = strings.TrimSuffix(a, numberI)
 				a = a + n
-			}
+			}* /
 			for j, s := range []string{"ts", "s", "f"} {
 				numberJ := strconv.Itoa(j)
 				a = strings.ReplaceAll(a, numberI+numberJ, s+n)
-			}* /
+			}
 		}*/
 
 		nucleusCount := 0
