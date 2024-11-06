@@ -87,7 +87,7 @@ var adposuffixes = []string{
 	"kxamlä", "ìlä", "wä", //"genitive"
 	"teri", //"topical"
 	// Case endings
-	"ìl", "l", "it", "ti", "t", "ur", "ru", "r", "yä", "ä", "ìri", "ri",
+	"ìl", "l" /*"it",*/, "ti" /*"t",*/, "ur", "ru", "r", "yä", "ä", "ìri", "ri",
 	// Sorted alphabetically by their reverse forms
 	"nemfa", "rofa", "ka", "fa", "na", "ta", "ya", //-a
 	"lisre", "pxisre", "sre", "luke", "ne", //-e

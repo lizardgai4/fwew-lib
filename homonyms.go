@@ -634,6 +634,10 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 		wordCount += 1
 		//checkAsyncLock.Wait()
 
+		word.Navi = ReefMe(word.IPA, false)[0]
+		word.Navi = strings.ReplaceAll(word.Navi, "_", "")
+		word.Navi = strings.ReplaceAll(word.Navi, "-", "")
+
 		if wordCount >= startNumber {
 			// Progress counter
 			if wordCount%100 == 0 {

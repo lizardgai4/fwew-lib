@@ -1031,7 +1031,7 @@ func ReefMe(ipa string, inter bool) []string {
 	ipa = strings.ReplaceAll(ipa, " ", "*.")
 
 	// Unstressed ä becomes e
-	ipa_syllables := strings.Split(ipa, ".")
+	/*ipa_syllables := strings.Split(ipa, ".")
 	if len(ipa_syllables) > 1 {
 		new_ipa := ""
 		for _, a := range ipa_syllables {
@@ -1044,21 +1044,21 @@ func ReefMe(ipa string, inter bool) []string {
 		}
 
 		ipa = new_ipa
-	}
+	}*/
 
 	breakdown := ""
-	ejectives := []string{"p'", "t'", "k'"}
+	/*ejectives := []string{"p'", "t'", "k'"}
 	soften := map[string]string{
 		"p'": "b",
 		"t'": "d",
 		"k'": "g",
-	}
+	}*/
 
 	// Reefify the IPA first
 	ipaReef := strings.ReplaceAll(ipa, "·", "")
 	if !inter {
 		// atxkxe and ekxtxu
-		for _, a := range ejectives {
+		/*for _, a := range ejectives {
 			for _, b := range ejectives {
 				ipaReef = strings.ReplaceAll(ipaReef, a+".ˈ"+b, soften[a]+".ˈ"+soften[b])
 				ipaReef = strings.ReplaceAll(ipaReef, a+"."+b, soften[a]+"."+soften[b])
@@ -1077,7 +1077,7 @@ func ReefMe(ipa string, inter bool) []string {
 		}
 
 		ipaReef = strings.ReplaceAll(ipaReef, "t͡sj", "tʃ")
-		ipaReef = strings.ReplaceAll(ipaReef, "sj", "ʃ")
+		ipaReef = strings.ReplaceAll(ipaReef, "sj", "ʃ")*/
 
 		temp := ""
 		runes := []rune(ipaReef)
