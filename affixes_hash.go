@@ -227,6 +227,20 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 
 	vowels := "aäeiìouù"
 
+	// For double letter homonyms like ayyoka or ayokka
+	suffixRunes := []rune(lastSuffix)
+	if len(suffixRunes) > 1 && !is_vowel(suffixRunes[0]) {
+		newCandidate := candidateDupe(input)
+		newCandidate.word = newCandidate.word + string(suffixRunes[0])
+		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+	}
+	prefixRunes := []rune(lastPrefix)
+	if len(prefixRunes) > 1 && !is_vowel(prefixRunes[len(prefixRunes)-1]) {
+		newCandidate := candidateDupe(input)
+		newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
+		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+	}
+
 	// fneu checking for fne-'u
 	if len(lastPrefix) > 0 && len(input.word) > 0 && hasAt(vowels, lastPrefix, -1) && hasAt(vowels, input.word, 0) {
 		if !implContainsAny(prefixes1lenition, []string{lastPrefix}) { // do not do this for leniting prefixes

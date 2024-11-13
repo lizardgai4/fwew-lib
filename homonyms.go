@@ -795,7 +795,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 127, 28)
+	StageThree(0, 3, 0)
 
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
