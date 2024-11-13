@@ -225,24 +225,10 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 		return candidates
 	}
 
-	suffixRunes := []rune(lastSuffix)
-
-	if len(suffixRunes) > 1 && !is_vowel(string(suffixRunes[0])) {
-		newCandidate := candidateDupe(input)
-		newCandidate.word = newCandidate.word + string(suffixRunes[0])
-		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-	}
-
-	prefixRunes := []rune(lastPrefix)
-
-	if len(prefixRunes) > 1 && !is_vowel(string(prefixRunes[len(prefixRunes)-1])) {
-		newCandidate := candidateDupe(input)
-		newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
-		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-	}
+	vowels := "aäeiìouù"
 
 	// fneu checking for fne-'u
-	if len(lastPrefix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastPrefix, -1)) && is_vowel(nth_rune(input.word, 0)) {
+	if len(lastPrefix) > 0 && len(input.word) > 0 && hasAt(vowels, lastPrefix, -1) && hasAt(vowels, input.word, 0) {
 		if !implContainsAny(prefixes1lenition, []string{lastPrefix}) { // do not do this for leniting prefixes
 			newCandidate := candidateDupe(input)
 			newCandidate.word = "'" + newCandidate.word
@@ -251,7 +237,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 	}
 
 	// fea checkeing for fe'a
-	if len(lastSuffix) > 0 && len(input.word) > 0 && is_vowel(nth_rune(lastSuffix, 0)) && is_vowel(nth_rune(input.word, -1)) {
+	if len(lastSuffix) > 0 && len(input.word) > 0 && hasAt(vowels, lastSuffix, 0) && hasAt(vowels, input.word, -1) {
 		newCandidate := candidateDupe(input)
 		newCandidate.word += "'"
 		deconjugateHelper(newCandidate, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
@@ -412,7 +398,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 				deconjugateHelper(newCandidate, 10, 10, -1, false, element, "")
 
 				// check "tsatan", "tan" and "atan"
-				newCandidate.word = get_last_rune(element, 1) + newCandidate.word
+				newCandidate.word = string(get_last_rune(element, 1)) + newCandidate.word
 				deconjugateHelper(newCandidate, 10, 10, -1, false, element, "")
 			}
 		}
@@ -433,7 +419,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 					deconjugateHelper(newCandidate, 3, suffixCheck, -1, false, element, "")
 
 					// check "tsatan", "tan" and "atan"
-					newCandidate.word = get_last_rune(element, 1) + newString
+					newCandidate.word = string(get_last_rune(element, 1)) + newString
 					deconjugateHelper(newCandidate, 3, suffixCheck, -1, false, element, "")
 				}
 			}
@@ -454,9 +440,9 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 					newCandidate.insistPOS = "n."
 
 					// Could it be pekoyu (pe + 'ekoyu, not pe + kxoyu)
-					if has("aäeiìou", get_last_rune(element, 1)) {
+					if hasAt(vowels, element, -1) {
 						// check "pxeyktan", "yktan" and "eyktan"
-						newCandidate.word = get_last_rune(element, 1) + newString
+						newCandidate.word = string(get_last_rune(element, 1)) + newString
 						deconjugateHelper(newCandidate, 4, suffixCheck, -1, false, element, "")
 
 						// check "pxeylan", "ylan" and "'eylan"
@@ -502,7 +488,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 					deconjugateHelper(newCandidate, 5, suffixCheck, -1, false, element, "")
 
 					// check "tsatan", "tan" and "atan"
-					newCandidate.word = get_last_rune(element, 1) + newCandidate.word
+					newCandidate.word = string(get_last_rune(element, 1)) + newCandidate.word
 					deconjugateHelper(newCandidate, 5, suffixCheck, -1, false, element, "")
 				}
 			}
@@ -755,7 +741,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 			runes := []rune(input.word)
 			for i, c := range runes {
 				// Infixes can only begin with vowels
-				if has("aäeiìou", string(c)) {
+				if is_vowel(c) {
 					shortString := string(runes[i:])
 					for _, infix := range infixes[c] {
 						if strings.HasPrefix(shortString, infix) {
@@ -911,9 +897,9 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							a.Affixes.Infix = candidate.infixes
 							a.Affixes.Suffix = candidate.suffixes
 							results = AppendAndAlphabetize(results, a)
-						} /*else if len(results) == 0 {
+						} else if len(results) == 0 {
 							results = AppendAndAlphabetize(results, infixError(searchNaviWord, "tì"+rebuiltVerb, c.IPA))
-						}*/
+						}
 					}
 				} else if candidate.insistPOS == "n." {
 					// n., pn., Prop.n. and inter. (but not vin.)
@@ -1096,7 +1082,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "errr", "er")
 						}
 
-						//rebuiltVerbForest := rebuiltVerb
+						rebuiltVerbForest := rebuiltVerb
 						rebuiltVerbArray := dialectCrunch(strings.Split(rebuiltVerb, " "), false)
 						rebuiltVerb = ""
 						for k, x := range rebuiltVerbArray {
@@ -1123,11 +1109,11 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							} else if rebuiltVerb[len(rebuiltVerb)-1] == '\'' && identicalRunes(rebuiltVerb[:len(rebuiltVerb)-1]+"a", rebuiltHyphen) {
 								// fp<us>e'a
 								results = AppendAndAlphabetize(results, a)
-							} /* else if firstInfixes == "us" {
+							} else if firstInfixes == "us" {
 								if len(results) == 0 {
 									results = AppendAndAlphabetize(results, infixError(searchNaviWord, rebuiltVerbForest, c.IPA))
 								}
-							}*/
+							}
 						} /*else if gerund { // ti is needed to weed out non-productive tì-verbs
 							if len(results) == 0 {
 								results = AppendAndAlphabetize(results, infixError(searchNaviWord, rebuiltVerbForest, c.IPA))

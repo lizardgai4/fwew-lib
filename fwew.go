@@ -1026,11 +1026,11 @@ func dialectCrunch(query []string, guaranteedForest bool) []string {
 
 		nucleusCount := 0
 		// remove reef tìftangs
-		for _, b := range []string{"a", "ä", "e", "i", "ì", "o", "u", "ù", "ll", "rr"} {
+		for i, b := range []string{"a", "ä", "e", "i", "ì", "o", "u", "ù", "ll", "rr"} {
 			if strings.Contains(a, b) {
 				nucleusCount += strings.Count(a, b)
-				for _, c := range []string{"a", "ä", "e", "i", "ì", "o", "u", "ù", "ll", "rr"} {
-					if is_vowel(b) && is_vowel(c) {
+				for j, c := range []string{"a", "ä", "e", "i", "ì", "o", "u", "ù", "ll", "rr"} {
+					if i < 8 && j < 8 {
 						a = strings.ReplaceAll(a, b+"'"+c, b+c)
 					}
 				}

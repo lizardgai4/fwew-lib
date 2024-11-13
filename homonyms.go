@@ -323,7 +323,7 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 		consonant := true
 		naviRunes := []rune(inputNavi)
 		lastRune := naviRunes[len(naviRunes)-1]
-		if is_vowel(string(lastRune)) {
+		if is_vowel(lastRune) {
 			vowel = true
 		} else if lastRune == 'y' || lastRune == 'w' {
 			diphthong = true
