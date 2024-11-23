@@ -13,7 +13,7 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 []string
+var candidates2 []candidate
 var candidates2Map = map[string]int{}
 var homoMap = map[string]int{}
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
@@ -27,14 +27,19 @@ var lenitionMap = map[string]string{
 	"kx": "k",
 	"'":  "",
 }
-var top10Longest = map[int]string{}
-var longest = 0
+var top10Longest = map[int8]string{}
+var longest int8 = 0
 
 var checkAsyncLock = sync.WaitGroup{}
 
 type tempHomsContainer struct {
 	mu       sync.Mutex
 	counters []string
+}
+
+type candidate struct {
+	navi   string
+	length int8
 }
 
 func (c *tempHomsContainer) addTempHom(name string) {
@@ -254,7 +259,7 @@ func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck
 		return nil
 	}
 	if _, ok := candidates2Map[inputNavi]; !ok {
-		candidates2 = append(candidates2, inputNavi)
+		candidates2 = append(candidates2, candidate{navi: inputNavi, length: int8(len([]rune(inputNavi)))})
 		candidates2Map[inputNavi] = 1
 	}
 	switch prefixCheck {
@@ -390,7 +395,8 @@ func reconjugateVerbs(inputNavi string, prefirstUsed bool, firstUsed bool, secon
 		return nil
 	}
 	if _, ok := candidates2Map[inputNavi]; !ok {
-		candidates2 = append(candidates2, removeBrackets(inputNavi))
+		noBracket := removeBrackets(inputNavi)
+		candidates2 = append(candidates2, candidate{navi: noBracket, length: int8(len([]rune(noBracket)))})
 		candidates2Map[inputNavi] = 1
 	}
 
@@ -422,14 +428,15 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 	word.Navi = strings.ToLower(word.Navi)
 
 	if _, ok := candidates2Map[word.Navi]; !ok {
-		candidates2 = append(candidates2, word.Navi)
+		candidates2 = append(candidates2, candidate{navi: word.Navi, length: int8(len([]rune(word.Navi)))})
 		candidates2Map[word.Navi] = 1
 	}
 
 	if word.PartOfSpeech == "pn." {
 		if _, ok := candidates2Map["nì"+word.Navi]; !ok {
-			candidates2 = append(candidates2, "nì"+word.Navi)
-			candidates2Map["nì"+word.Navi] = 1
+			new := "nì" + word.Navi
+			candidates2 = append(candidates2, candidate{navi: new, length: int8(len([]rune(new)))})
+			candidates2Map[new] = 1
 		}
 	}
 
@@ -448,7 +455,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		}
 		if found {
 			if _, ok := candidates2Map[word.Navi]; !ok {
-				candidates2 = append(candidates2, word.Navi)
+				candidates2 = append(candidates2, candidate{navi: word.Navi, length: int8(len([]rune(word.Navi)))})
 				candidates2Map[word.Navi] = 1
 			}
 			reconjugateNouns(word, word.Navi, 0, 0, -1, affixLimit-1)
@@ -461,7 +468,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 
 			if _, ok := candidates2Map[gerund]; !ok {
-				candidates2 = append(candidates2, gerund)
+				candidates2 = append(candidates2, candidate{navi: gerund, length: int8(len([]rune(gerund)))})
 				candidates2Map[gerund] = 1
 			}
 
@@ -473,7 +480,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				"ketsuk" + word.Navi + "a", "hetsuk" + word.Navi + "a"}
 			for _, a := range abilityVerbs {
 				if _, ok := candidates2Map[a]; !ok {
-					candidates2 = append(candidates2, a)
+					candidates2 = append(candidates2, candidate{navi: a, length: int8(len([]rune(a)))})
 					candidates2Map[a] = 1
 				}
 			}
@@ -491,18 +498,19 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 			if found {
 				if _, ok := candidates2Map[gerund]; !ok {
-					candidates2 = append(candidates2, gerund)
+					candidates2 = append(candidates2, candidate{navi: gerund, length: int8(len([]rune(gerund)))})
 					candidates2Map[gerund] = 1
 				}
 				reconjugateNouns(word, gerund, 0, 0, -1, affixLimit-1)
 			}
 		}
 		// Ability to [verb]
-		if _, ok := candidates2Map[word.Navi+"tswo"]; !ok {
-			candidates2 = append(candidates2, word.Navi+"tswo")
-			candidates2Map[word.Navi+"tswo"] = 1
+		tswo := word.Navi + "tswo"
+		if _, ok := candidates2Map[tswo]; !ok {
+			candidates2 = append(candidates2, candidate{navi: tswo, length: int8(len([]rune(tswo)))})
+			candidates2Map[tswo] = 1
 		}
-		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
+		reconjugateNouns(word, tswo, 0, 0, 0, affixLimit-1)
 
 		//Lenited forms, too
 		found := false
@@ -516,27 +524,31 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			if _, ok := candidates2Map[word.Navi+"tswo"]; !ok {
-				candidates2 = append(candidates2, word.Navi+"tswo")
-				candidates2Map[word.Navi+"tswo"] = 1
+			tswo = word.Navi + "tswo"
+			if _, ok := candidates2Map[tswo]; !ok {
+				candidates2 = append(candidates2, candidate{navi: tswo, length: int8(len([]rune(tswo)))})
+				candidates2Map[tswo] = 1
 			}
-			reconjugateNouns(word, word.Navi+"tswo", 0, 0, -1, affixLimit-2)
+			reconjugateNouns(word, tswo, 0, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
-		if _, ok := candidates2Map[word.Navi+"a"]; !strings.HasSuffix(word.Navi, "a") && !ok {
-			candidates2 = append(candidates2, word.Navi+"a")
-			candidates2Map[word.Navi+"a"] = 1
+		adjA := word.Navi + "a"
+		if _, ok := candidates2Map[adjA]; !strings.HasSuffix(word.Navi, "a") && !ok {
+			candidates2 = append(candidates2, candidate{navi: adjA, length: int8(len([]rune(adjA)))})
+			candidates2Map[adjA] = 1
 		}
 
 		if allowPrefixes {
-			if _, ok := candidates2Map["a"+word.Navi]; !strings.HasPrefix(word.Navi, "a") && !ok {
-				candidates2 = append(candidates2, "a"+word.Navi)
-				candidates2Map["a"+word.Navi] = 1
+			aAdj := "a" + word.Navi
+			if _, ok := candidates2Map[aAdj]; !strings.HasPrefix(word.Navi, "a") && !ok {
+				candidates2 = append(candidates2, candidate{navi: aAdj, length: int8(len([]rune(aAdj)))})
+				candidates2Map[aAdj] = 1
 			}
-			if _, ok := candidates2Map["nì"+word.Navi]; !ok {
-				candidates2 = append(candidates2, "nì"+word.Navi)
-				candidates2Map["nì"+word.Navi] = 1
+			nìAdj := "nì" + word.Navi
+			if _, ok := candidates2Map[nìAdj]; !ok {
+				candidates2 = append(candidates2, candidate{navi: nìAdj, length: int8(len([]rune(nìAdj)))})
+				candidates2Map[nìAdj] = 1
 			}
 		}
 
@@ -545,11 +557,12 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			if strings.HasPrefix(word.Navi, a) {
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
-				candidates2 = append(candidates2, word.Navi)
+				candidates2 = append(candidates2, candidate{navi: word.Navi, length: int8(len([]rune(word.Navi)))})
 				candidates2Map[word.Navi] = 1
 				if !strings.HasSuffix(word.Navi, "a") {
-					candidates2 = append(candidates2, word.Navi+"a")
-					candidates2Map[word.Navi+"a"] = 1
+					lenitA := word.Navi + "a"
+					candidates2 = append(candidates2, candidate{navi: lenitA, length: int8(len([]rune(lenitA)))})
+					candidates2Map[lenitA] = 1
 				}
 				break
 			}
@@ -575,7 +588,7 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
-func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
+func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for _, a := range candidates {
@@ -585,7 +598,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 
 		for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
 			for _, n := range []string{"n", "ng", "m"} {
-				if strings.Contains(a, n+t) || strings.Contains(a, t+n) {
+				if strings.Contains(a.navi, n+t) || strings.Contains(a.navi, t+n) {
 					containsNasal = true
 					break
 				}
@@ -598,7 +611,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 		if !containsNasal {
 			continue
 		}*/
-		results, err := TranslateFromNaviHash(a, true)
+		results, err := TranslateFromNaviHash(a.navi, true)
 
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 			allNaviWords := ""
@@ -641,7 +654,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 					allLengthsString = strings.TrimSuffix(allLengthsString, " ")
 					homoMap[allNaviWords] = 1
 					if atLeast3 {
-						stringy := word.PartOfSpeech + ": -" + a + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString
+						stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString
 						fmt.Println(stringy)
 						_, err := file.WriteString(stringy + "\n")
 						if err != nil {
@@ -649,7 +662,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 							return
 						}
 					}
-					*tempHoms = append(*tempHoms, a)
+					*tempHoms = append(*tempHoms, a.navi)
 				}
 			}
 		}
@@ -657,8 +670,7 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 			fmt.Println("oops " + a)
 			continue
 		}*/
-		runes := []rune(a)
-		runeCount := len(runes)
+		runeCount := int8(len(a.navi))
 		if runeCount < 40 {
 			continue
 		}
@@ -667,9 +679,9 @@ func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word
 			//fmt.Println(a)
 		}
 		if _, ok := top10Longest[runeCount]; ok {
-			top10Longest[runeCount] = top10Longest[runeCount] + " " + a
+			top10Longest[runeCount] = top10Longest[runeCount] + " " + a.navi
 		} else {
-			top10Longest[runeCount] = a
+			top10Longest[runeCount] = a.navi
 		}
 	}
 }
@@ -713,7 +725,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 
 			// No multiword words
 			if !strings.Contains(word.Navi, " ") {
-				candidates2 = []string{word.Navi} //empty array of strings
+				candidates2 = []candidate{{navi: word.Navi, length: int8(len([]rune(word.Navi)))}} //empty array of strings
 
 				// Get conjugations
 				reconjugate(word, true, affixLimit)
@@ -733,7 +745,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				}
 
 				sort.SliceStable(candidates2, func(i, j int) bool {
-					return len([]rune(candidates2[i])) < len([]rune(candidates2[j]))
+					return candidates2[i].length < candidates2[j].length
 				})
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
@@ -755,14 +767,14 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				}
 				if found {
 					if _, ok := candidates2Map[siTswo]; !ok {
-						candidates2 = append(candidates2, siTswo)
+						candidates2 = append(candidates2, candidate{navi: siTswo, length: int8(len([]rune(siTswo)))})
 						candidates2Map[siTswo] = 1
 					}
 					reconjugateNouns(word, siTswo, 0, 0, -1, affixLimit)
 				}
 
 				sort.SliceStable(candidates2, func(i, j int) bool {
-					return len([]rune(candidates2[i])) < len([]rune(candidates2[j]))
+					return candidates2[i].length < candidates2[j].length
 				})
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
