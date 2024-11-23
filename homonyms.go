@@ -578,10 +578,6 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	sort.SliceStable(candidates, func(i, j int) bool {
-		return len([]rune(candidates[i])) < len([]rune(candidates[j]))
-	})
-
 	for _, a := range candidates {
 
 		//Nasal assimilation stuff
@@ -735,6 +731,10 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 				if found {
 					reconjugate(word, false, affixLimit)
 				}
+
+				sort.SliceStable(candidates2, func(i, j int) bool {
+					return len([]rune(candidates2[i])) < len([]rune(candidates2[j]))
+				})
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
 				go CheckHomsAsync(file, candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
@@ -760,6 +760,10 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 					}
 					reconjugateNouns(word, siTswo, 0, 0, -1, affixLimit)
 				}
+
+				sort.SliceStable(candidates2, func(i, j int) bool {
+					return len([]rune(candidates2[i])) < len([]rune(candidates2[j]))
+				})
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
 				go CheckHomsAsync(file, candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
