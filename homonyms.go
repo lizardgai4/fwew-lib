@@ -578,7 +578,7 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 func CheckHomsAsync(file *os.File, candidates []string, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	sort.Slice(candidates, func(i, j int) bool {
+	sort.SliceStable(candidates, func(i, j int) bool {
 		return len([]rune(candidates[i])) < len([]rune(candidates[j]))
 	})
 
@@ -795,7 +795,7 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 4, 0)
+	StageThree(0, 3, 0)
 
 	fmt.Println(longest)
 	fmt.Println(top10Longest[longest])
