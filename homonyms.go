@@ -799,6 +799,11 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 	checkedString := "Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations"
 	fmt.Println(checkedString)
 	file.WriteString(checkedString + "\n")
+	
+	fmt.Println(longest)
+	file.WriteString(strconv.Itoa(int(longest)) + "\n")
+	fmt.Println(top10Longest[longest])
+	file.WriteString(top10Longest[longest] + "\n")
 
 	return
 }
@@ -812,9 +817,4 @@ func homonymSearch() {
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
 	StageThree(0, 5, 0)
-
-	fmt.Println(longest)
-	file.WriteString(strconv.Itoa(longest) + "\n")
-	fmt.Println(top10Longest[longest])
-	file.WriteString(top10Longest[longest] + "\n")
 }
