@@ -467,7 +467,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		for _, a := range []string{"us","awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 			if _, ok := candidates2Map[participle + "a"]; !ok {
-				candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle)))})
+				candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle + "a")))})
 				candidates2Map[participle + "a"] = 1
 			}
 
