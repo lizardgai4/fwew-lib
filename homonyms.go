@@ -462,6 +462,34 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(word.InfixLocations, false, false, false, affixLimit)
+
+		// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
+		for _, a := range []string{"us","awn"} {
+			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
+			if _, ok := candidates2Map[participle + "a"]; !ok {
+				candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle)))})
+				candidates2Map[participle] = 1
+			}
+
+			//Lenited forms, too
+			found := false
+
+			for _, a := range lenitors {
+				if strings.HasPrefix(participle, a) {
+					participle = strings.TrimPrefix(participle, a)
+					participle = lenitionMap[a] + participle
+					found = true
+					break
+				}
+			}
+			if found {
+				if _, ok := candidates2Map[participle]; !ok {
+					candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle)))})
+					candidates2Map[participle] = 1
+				}
+			}
+		}
+
 		//None of these can productively combine with infixes
 		if allowPrefixes {
 			// Gerunds
@@ -481,6 +509,15 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			for _, a := range abilityVerbs {
 				if _, ok := candidates2Map[a]; !ok {
 					candidates2 = append(candidates2, candidate{navi: a, length: uint8(len([]rune(a)))})
+					candidates2Map[a] = 1
+				}
+			}
+
+			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
+			for _, a := range []string{"us","awn"} {
+				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
+				if _, ok := candidates2Map["a" + participle]; !ok {
+					candidates2 = append(candidates2, candidate{navi: "a" + participle, length: uint8(len([]rune(participle)))})
 					candidates2Map[a] = 1
 				}
 			}
@@ -816,5 +853,5 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 5, 0)
+	StageThree(0, 3, 0)
 }
