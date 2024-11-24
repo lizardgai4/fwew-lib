@@ -468,7 +468,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 			if _, ok := candidates2Map[participle + "a"]; !ok {
 				candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle)))})
-				candidates2Map[participle] = 1
+				candidates2Map[participle + "a"] = 1
 			}
 
 			//Lenited forms, too
@@ -483,9 +483,9 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				}
 			}
 			if found {
-				if _, ok := candidates2Map[participle]; !ok {
-					candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle)))})
-					candidates2Map[participle] = 1
+				if _, ok := candidates2Map[participle + "a"]; !ok {
+					candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle + "a")))})
+					candidates2Map[participle + "a"] = 1
 				}
 			}
 		}
@@ -517,8 +517,8 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			for _, a := range []string{"us","awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 				if _, ok := candidates2Map["a" + participle]; !ok {
-					candidates2 = append(candidates2, candidate{navi: "a" + participle, length: uint8(len([]rune(participle)))})
-					candidates2Map[a] = 1
+					candidates2 = append(candidates2, candidate{navi: "a" + participle, length: uint8(len([]rune("a" + participle)))})
+					candidates2Map["a" + participle] = 1
 				}
 			}
 
@@ -853,5 +853,5 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 3, 0)
+	StageThree(0, 127, 0)
 }
