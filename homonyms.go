@@ -252,16 +252,23 @@ func StageTwo() error {
 	return nil
 }
 
+// For StageThree, this adds things to the candidates
+func addToCandidates(candidate1 string) {
+	if _, ok := candidates2Map[candidate1]; !ok {
+		candidates2 = append(candidates2, candidate{navi: candidate1, length: uint8(len([]rune(candidate1)))})
+		candidates2Map[candidate1] = 1
+	}
+}
+
 // Helper for StageThree, based on reconstruct from affixes.go
 func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8, affixCountdown int8) error {
 	// End state: Limit to 2 affixes per noun
 	if affixCountdown == 0 {
 		return nil
 	}
-	if _, ok := candidates2Map[inputNavi]; !ok {
-		candidates2 = append(candidates2, candidate{navi: inputNavi, length: uint8(len([]rune(inputNavi)))})
-		candidates2Map[inputNavi] = 1
-	}
+
+	addToCandidates(inputNavi)
+
 	switch prefixCheck {
 	case 0:
 		for _, element := range stemPrefixes {
@@ -394,11 +401,9 @@ func reconjugateVerbs(inputNavi string, prefirstUsed bool, firstUsed bool, secon
 	if affixLimit == 0 {
 		return nil
 	}
-	if _, ok := candidates2Map[inputNavi]; !ok {
-		noBracket := removeBrackets(inputNavi)
-		candidates2 = append(candidates2, candidate{navi: noBracket, length: uint8(len([]rune(noBracket)))})
-		candidates2Map[inputNavi] = 1
-	}
+
+	noBracket := removeBrackets(inputNavi)
+	addToCandidates(noBracket)
 
 	if !prefirstUsed {
 		reconjugateVerbs(strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed, affixLimit-1)
@@ -427,17 +432,10 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 	word.Navi = strings.ReplaceAll(word.Navi, "--", "")
 	word.Navi = strings.ToLower(word.Navi)
 
-	if _, ok := candidates2Map[word.Navi]; !ok {
-		candidates2 = append(candidates2, candidate{navi: word.Navi, length: uint8(len([]rune(word.Navi)))})
-		candidates2Map[word.Navi] = 1
-	}
+	addToCandidates(word.Navi)
 
 	if word.PartOfSpeech == "pn." {
-		if _, ok := candidates2Map["nì"+word.Navi]; !ok {
-			new := "nì" + word.Navi
-			candidates2 = append(candidates2, candidate{navi: new, length: uint8(len([]rune(new)))})
-			candidates2Map[new] = 1
-		}
+		addToCandidates("nì"+word.Navi)
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
@@ -454,10 +452,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			if _, ok := candidates2Map[word.Navi]; !ok {
-				candidates2 = append(candidates2, candidate{navi: word.Navi, length: uint8(len([]rune(word.Navi)))})
-				candidates2Map[word.Navi] = 1
-			}
+			addToCandidates(word.Navi)
 			reconjugateNouns(word, word.Navi, 0, 0, -1, affixLimit-1)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
@@ -466,10 +461,8 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 		for _, a := range []string{"us", "awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-			if _, ok := candidates2Map[participle+"a"]; !ok {
-				candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle + "a")))})
-				candidates2Map[participle+"a"] = 1
-			}
+
+			addToCandidates(participle+"a")
 
 			//Lenited forms, too
 			found := false
@@ -483,10 +476,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				}
 			}
 			if found {
-				if _, ok := candidates2Map[participle+"a"]; !ok {
-					candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle + "a")))})
-					candidates2Map[participle+"a"] = 1
-				}
+				addToCandidates(participle+"a")
 			}
 		}
 
@@ -495,10 +485,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 
-			if _, ok := candidates2Map[gerund]; !ok {
-				candidates2 = append(candidates2, candidate{navi: gerund, length: uint8(len([]rune(gerund)))})
-				candidates2Map[gerund] = 1
-			}
+			addToCandidates(gerund)
 
 			reconjugateNouns(word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
@@ -507,19 +494,13 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				"tsuk" + word.Navi + "a", "ketsuk" + word.Navi, "hetsuk" + word.Navi, "aketsuk" + word.Navi,
 				"ketsuk" + word.Navi + "a", "hetsuk" + word.Navi + "a"}
 			for _, a := range abilityVerbs {
-				if _, ok := candidates2Map[a]; !ok {
-					candidates2 = append(candidates2, candidate{navi: a, length: uint8(len([]rune(a)))})
-					candidates2Map[a] = 1
-				}
+				addToCandidates(a)
 			}
 
 			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 			for _, a := range []string{"us", "awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-				if _, ok := candidates2Map["a"+participle]; !ok {
-					candidates2 = append(candidates2, candidate{navi: "a" + participle, length: uint8(len([]rune("a" + participle)))})
-					candidates2Map["a"+participle] = 1
-				}
+				addToCandidates("a"+participle)
 			}
 
 			//Lenited forms, too
@@ -534,20 +515,13 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				}
 			}
 			if found {
-				if _, ok := candidates2Map[gerund]; !ok {
-					candidates2 = append(candidates2, candidate{navi: gerund, length: uint8(len([]rune(gerund)))})
-					candidates2Map[gerund] = 1
-				}
+				addToCandidates(gerund)
 				reconjugateNouns(word, gerund, 0, 0, -1, affixLimit-1)
 			}
 		}
 		// Ability to [verb]
-		tswo := word.Navi + "tswo"
-		if _, ok := candidates2Map[tswo]; !ok {
-			candidates2 = append(candidates2, candidate{navi: tswo, length: uint8(len([]rune(tswo)))})
-			candidates2Map[tswo] = 1
-		}
-		reconjugateNouns(word, tswo, 0, 0, 0, affixLimit-1)
+		addToCandidates(word.Navi + "tswo")
+		reconjugateNouns(word, word.Navi + "tswo", 0, 0, 0, affixLimit-1)
 
 		//Lenited forms, too
 		found := false
@@ -561,32 +535,16 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			tswo = word.Navi + "tswo"
-			if _, ok := candidates2Map[tswo]; !ok {
-				candidates2 = append(candidates2, candidate{navi: tswo, length: uint8(len([]rune(tswo)))})
-				candidates2Map[tswo] = 1
-			}
-			reconjugateNouns(word, tswo, 0, 0, -1, affixLimit-2)
+			addToCandidates(word.Navi + "tswo")
+			reconjugateNouns(word, word.Navi + "tswo", 0, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
-		adjA := word.Navi + "a"
-		if _, ok := candidates2Map[adjA]; !strings.HasSuffix(word.Navi, "a") && !ok {
-			candidates2 = append(candidates2, candidate{navi: adjA, length: uint8(len([]rune(adjA)))})
-			candidates2Map[adjA] = 1
-		}
+		addToCandidates(word.Navi + "a")
 
 		if allowPrefixes {
-			aAdj := "a" + word.Navi
-			if _, ok := candidates2Map[aAdj]; !strings.HasPrefix(word.Navi, "a") && !ok {
-				candidates2 = append(candidates2, candidate{navi: aAdj, length: uint8(len([]rune(aAdj)))})
-				candidates2Map[aAdj] = 1
-			}
-			nìAdj := "nì" + word.Navi
-			if _, ok := candidates2Map[nìAdj]; !ok {
-				candidates2 = append(candidates2, candidate{navi: nìAdj, length: uint8(len([]rune(nìAdj)))})
-				candidates2Map[nìAdj] = 1
-			}
+			addToCandidates("a" + word.Navi)
+			addToCandidates("nì" + word.Navi)
 		}
 
 		//Lenited forms, too
@@ -594,12 +552,9 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			if strings.HasPrefix(word.Navi, a) {
 				word.Navi = strings.TrimPrefix(word.Navi, a)
 				word.Navi = lenitionMap[a] + word.Navi
-				candidates2 = append(candidates2, candidate{navi: word.Navi, length: uint8(len([]rune(word.Navi)))})
-				candidates2Map[word.Navi] = 1
+				addToCandidates(word.Navi)
 				if !strings.HasSuffix(word.Navi, "a") {
-					lenitA := word.Navi + "a"
-					candidates2 = append(candidates2, candidate{navi: lenitA, length: uint8(len([]rune(lenitA)))})
-					candidates2Map[lenitA] = 1
+					addToCandidates(word.Navi + "a")
 				}
 				break
 			}
@@ -803,10 +758,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 					}
 				}
 				if found {
-					if _, ok := candidates2Map[siTswo]; !ok {
-						candidates2 = append(candidates2, candidate{navi: siTswo, length: uint8(len([]rune(siTswo)))})
-						candidates2Map[siTswo] = 1
-					}
+					addToCandidates(siTswo)
 					reconjugateNouns(word, siTswo, 0, 0, -1, affixLimit)
 				}
 
