@@ -464,11 +464,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		reconjugateVerbs(word.InfixLocations, false, false, false, affixLimit)
 
 		// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
-		for _, a := range []string{"us","awn"} {
+		for _, a := range []string{"us", "awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-			if _, ok := candidates2Map[participle + "a"]; !ok {
+			if _, ok := candidates2Map[participle+"a"]; !ok {
 				candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle + "a")))})
-				candidates2Map[participle + "a"] = 1
+				candidates2Map[participle+"a"] = 1
 			}
 
 			//Lenited forms, too
@@ -483,9 +483,9 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				}
 			}
 			if found {
-				if _, ok := candidates2Map[participle + "a"]; !ok {
+				if _, ok := candidates2Map[participle+"a"]; !ok {
 					candidates2 = append(candidates2, candidate{navi: participle + "a", length: uint8(len([]rune(participle + "a")))})
-					candidates2Map[participle + "a"] = 1
+					candidates2Map[participle+"a"] = 1
 				}
 			}
 		}
@@ -514,11 +514,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 
 			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
-			for _, a := range []string{"us","awn"} {
+			for _, a := range []string{"us", "awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-				if _, ok := candidates2Map["a" + participle]; !ok {
+				if _, ok := candidates2Map["a"+participle]; !ok {
 					candidates2 = append(candidates2, candidate{navi: "a" + participle, length: uint8(len([]rune("a" + participle)))})
-					candidates2Map["a" + participle] = 1
+					candidates2Map["a"+participle] = 1
 				}
 			}
 
@@ -836,7 +836,7 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 	checkedString := "Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations"
 	fmt.Println(checkedString)
 	file.WriteString(checkedString + "\n")
-	
+
 	fmt.Println(longest)
 	file.WriteString(strconv.Itoa(int(longest)) + "\n")
 	fmt.Println(top10Longest[longest])
@@ -853,5 +853,5 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 127, 0)
+	StageThree(0, 3, 0)
 }
