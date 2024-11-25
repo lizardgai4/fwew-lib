@@ -29,6 +29,8 @@ var lenitionMap = map[string]string{
 }
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
+var charLimit int = 14
+//var dupeLengthsMap = map[int]int{}
 
 var checkAsyncLock = sync.WaitGroup{}
 
@@ -254,16 +256,28 @@ func StageTwo() error {
 
 // For StageThree, this adds things to the candidates
 func addToCandidates(candidate1 string) {
-	if _, ok := candidates2Map[candidate1]; !ok {
-		candidates2 = append(candidates2, candidate{navi: candidate1, length: uint8(len([]rune(candidate1)))})
+	newLength := len([]rune(candidate1))
+	if _, ok := candidates2Map[candidate1]; !ok && newLength <= charLimit {
+		candidates2 = append(candidates2, candidate{navi: candidate1, length: uint8(newLength)})
 		candidates2Map[candidate1] = 1
-	}
+	} /*else {
+		runelen := len([]rune(candidate1))
+		if _, ok := dupeLengthsMap[runelen]; ok {
+			dupeLengthsMap[runelen] = dupeLengthsMap[runelen] + 1
+		} else {
+			dupeLengthsMap[runelen] = 1
+		}
+	}*/
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
 func reconjugateNouns(input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8, affixCountdown int8) error {
 	// End state: Limit to 2 affixes per noun
 	if affixCountdown == 0 {
+		return nil
+	}
+
+	if len([]rune(inputNavi)) > charLimit {
 		return nil
 	}
 
@@ -585,12 +599,16 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 
 	for _, a := range candidates {
 
+		/*tempA := strings.ReplaceAll(a.navi, "nts", "")
+		tempA = strings.ReplaceAll(tempA, "mts", "")
+		tempA = strings.ReplaceAll(tempA, "ngts", "")
+
 		//Nasal assimilation stuff
-		/*containsNasal := false
+		containsNasal := false
 
 		for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
 			for _, n := range []string{"n", "ng", "m"} {
-				if strings.Contains(a.navi, n+t) || strings.Contains(a.navi, t+n) {
+				if strings.Contains(tempA, n+t) || strings.Contains(tempA, t+n) {
 					containsNasal = true
 					break
 				}
@@ -678,7 +696,8 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 	}
 }
 
-func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
+func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
+	charLimit = charLimitSet
 	start := time.Now()
 
 	file, err := os.Create("results.txt")
@@ -794,6 +813,8 @@ func StageThree(minAffix int, affixLimit int8, startNumber int) (err error) {
 	fmt.Println(top10Longest[longest])
 	file.WriteString(top10Longest[longest] + "\n")
 
+	//fmt.Println(dupeLengthsMap)
+
 	return
 }
 
@@ -804,6 +825,6 @@ func homonymSearch() {
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
-	// minimum affixes, maximum affixes, start at word number N
-	StageThree(0, 3, 0)
+	// minimum affixes, maximum affixes, maximum word length, start at word number N
+	StageThree(0, 127, 14, 0)
 }
