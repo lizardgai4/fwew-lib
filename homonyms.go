@@ -30,6 +30,7 @@ var lenitionMap = map[string]string{
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
 var charLimit int = 14
+
 //var dupeLengthsMap = map[int]int{}
 
 var checkAsyncLock = sync.WaitGroup{}
@@ -135,23 +136,28 @@ func StageOne() error {
 
 // Helper to detect presences of affixes
 func AffixCount(word Word) string {
-	prefixCount := "0"
-	infixCount := "0"
-	suffixCount := "0"
+	var fixes strings.Builder
 
 	if len(word.Affixes.Prefix) > 0 {
-		prefixCount = "1"
+		fixes.WriteString("1")
+	} else {
+		fixes.WriteString("0")
 	}
 	if len(word.Affixes.Infix) > 0 {
-		infixCount = "1"
+		/*for _, fix := range word.Affixes.Infix {
+			fixes.WriteString(fix)
+		}*/
+		fixes.WriteString("1")
 	}
 	if len(word.Affixes.Suffix) > 0 {
-		suffixCount = "1"
+		fixes.WriteString("1")
+	} else {
+		fixes.WriteString("0")
 	}
 
 	//fmt.Println(prefixCount + infixCount + suffixCount)
 
-	return prefixCount + infixCount + suffixCount
+	return fixes.String()
 }
 
 // Helper to turn a string into a list of known words
@@ -449,7 +455,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 	addToCandidates(word.Navi)
 
 	if word.PartOfSpeech == "pn." {
-		addToCandidates("nì"+word.Navi)
+		addToCandidates("nì" + word.Navi)
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
@@ -476,7 +482,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		for _, a := range []string{"us", "awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 
-			addToCandidates(participle+"a")
+			addToCandidates(participle + "a")
 
 			//Lenited forms, too
 			found := false
@@ -490,7 +496,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 				}
 			}
 			if found {
-				addToCandidates(participle+"a")
+				addToCandidates(participle + "a")
 			}
 		}
 
@@ -514,7 +520,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 			for _, a := range []string{"us", "awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-				addToCandidates("a"+participle)
+				addToCandidates("a" + participle)
 			}
 
 			//Lenited forms, too
@@ -535,7 +541,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		}
 		// Ability to [verb]
 		addToCandidates(word.Navi + "tswo")
-		reconjugateNouns(word, word.Navi + "tswo", 0, 0, 0, affixLimit-1)
+		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
 
 		//Lenited forms, too
 		found := false
@@ -550,7 +556,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 		}
 		if found {
 			addToCandidates(word.Navi + "tswo")
-			reconjugateNouns(word, word.Navi + "tswo", 0, 0, -1, affixLimit-2)
+			reconjugateNouns(word, word.Navi+"tswo", 0, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -594,6 +600,61 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
+// modified from https://www.slingacademy.com/article/how-to-find-common-elements-of-2-slices-in-go/
+func findUniques(affixes [][]string) int {
+	numberUnique := 0
+
+	checked := map[string]bool{}
+
+	if len(affixes) > 1 {
+		// compare all of one array
+		for i, a := range affixes {
+			// to the arrays after
+			for _, b := range affixes[i+1:] {
+				for _, aPrime := range a {
+					found := false
+					if _, ok := checked[aPrime]; ok {
+						continue
+					}
+
+					checked[aPrime] = true
+					for _, bPrime := range b {
+						if aPrime == bPrime {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						numberUnique++
+					}
+				}
+
+				for _, bPrime := range b {
+					found := false
+					if _, ok := checked[bPrime]; ok {
+						continue
+					}
+
+					checked[bPrime] = true
+					for _, aPrime := range a {
+						if aPrime == bPrime {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						numberUnique++
+					}
+				}
+			}
+		}
+	}
+
+	return numberUnique
+}
+
 func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -624,54 +685,69 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 		results, err := TranslateFromNaviHash(a.navi, true)
 
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
-			allNaviWords := ""
-			allLengths := []int{}
+
+			results[0] = results[0][1:]
+
+			sort.Slice(results[0], func(i, j int) bool {
+				return results[0][i].Navi < results[0][j].Navi
+			})
+
+			var allNaviWords strings.Builder
+			//infixFound := false
 			noDupes := []string{}
-			atLeast3 := false
-			for i, b := range results[0] {
-				if i == 0 {
-					continue
-				}
+
+			allPrefixes := [][]string{}
+			allInfixes := [][]string{}
+			allSuffixes := [][]string{}
+
+			for _, b := range results[0] {
 				dupe := false
 				for _, c := range noDupes {
-					if c == b.Navi+AffixCount(b) {
+					if c == b.Navi {
 						dupe = true
 						break
 					}
 				}
 				if !dupe { //&& i < 3 {
-					noDupes = AppendStringAlphabetically(noDupes, b.Navi+AffixCount(b))
-					lengths := len(b.Affixes.Prefix) + len(b.Affixes.Suffix) + len(b.Affixes.Infix)
-					allLengths = append(allLengths, lengths)
-					if lengths >= minAffix {
-						atLeast3 = true
-					}
+					noDupes = append(noDupes, b.Navi)
+
+					allPrefixes = append(allPrefixes, b.Affixes.Prefix)
+					allInfixes = append(allInfixes, b.Affixes.Infix)
+					allSuffixes = append(allSuffixes, b.Affixes.Suffix)
+
+					/*if len(b.Affixes.Infix) > 0 {
+						infixFound = true
+					}*/
 				}
 			}
 
 			for _, b := range noDupes {
-				allNaviWords += b + " "
+				allNaviWords.WriteString(b)
+				allNaviWords.WriteString(" ")
 			}
+
+			var allLengthsString strings.Builder
+
+			allLengthsString.WriteString(strconv.Itoa(findUniques(allPrefixes)))
+			allLengthsString.WriteString(strconv.Itoa(findUniques(allInfixes)))
+			allLengthsString.WriteString(strconv.Itoa(findUniques(allSuffixes)))
+
+			allNaviWords.WriteString(allLengthsString.String())
+
+			homoMapQuery := allNaviWords.String()
 
 			// No duplicates
 			if len(noDupes) > 1 {
-				allLengthsString := ""
+				if _, ok := homoMap[homoMapQuery]; !ok {
+					homoMap[homoMapQuery] = 1
+					stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + homoMapQuery
+					fmt.Println(stringy)
+					_, err := file.WriteString(stringy + "\n")
+					if err != nil {
+						fmt.Println("Error writing to file:", err)
+						return
+					}
 
-				if _, ok := homoMap[allNaviWords]; !ok {
-					for _, a := range allLengths {
-						allLengthsString += strconv.Itoa(a) + " "
-					}
-					allLengthsString = strings.TrimSuffix(allLengthsString, " ")
-					homoMap[allNaviWords] = 1
-					if atLeast3 {
-						stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + allNaviWords + " " + allLengthsString
-						fmt.Println(stringy)
-						_, err := file.WriteString(stringy + "\n")
-						if err != nil {
-							fmt.Println("Error writing to file:", err)
-							return
-						}
-					}
 					*tempHoms = append(*tempHoms, a.navi)
 				}
 			}
@@ -679,7 +755,7 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 		/*if len(strings.Split(a, " ")) > 1 {
 			fmt.Println("oops " + a)
 			continue
-		}*/
+		}
 		runeCount := uint8(len(a.navi))
 		if runeCount < 40 {
 			continue
@@ -692,7 +768,7 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 			top10Longest[runeCount] = top10Longest[runeCount] + " " + a.navi
 		} else {
 			top10Longest[runeCount] = a.navi
-		}
+		}*/
 	}
 }
 
@@ -826,5 +902,5 @@ func homonymSearch() {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 127, 14, 0)
+	StageThree(0, 4, 50, 0)
 }
