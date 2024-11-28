@@ -601,8 +601,9 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 }
 
 // modified from https://www.slingacademy.com/article/how-to-find-common-elements-of-2-slices-in-go/
-func findUniques(affixes [][]string) int {
-	numberUnique := 0
+func findUniques(affixes [][]string) (bool, string) {
+	var uniques strings.Builder
+	affixPresent := false
 
 	checked := map[string]bool{}
 
@@ -610,6 +611,10 @@ func findUniques(affixes [][]string) int {
 		// compare all of one array
 		for i, a := range affixes {
 			// to the arrays after
+
+			if len(a) > 0 {
+				affixPresent = true
+			}
 			for _, b := range affixes[i+1:] {
 				for _, aPrime := range a {
 					found := false
@@ -626,7 +631,7 @@ func findUniques(affixes [][]string) int {
 					}
 
 					if !found {
-						numberUnique++
+						uniques.WriteString(aPrime)
 					}
 				}
 
@@ -645,14 +650,14 @@ func findUniques(affixes [][]string) int {
 					}
 
 					if !found {
-						numberUnique++
+						uniques.WriteString(bPrime)
 					}
 				}
 			}
 		}
 	}
 
-	return numberUnique
+	return affixPresent, uniques.String()
 }
 
 func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
@@ -735,9 +740,31 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 				allNaviWords.WriteString(" ")
 			}
 
-			allNaviWords.WriteString(strconv.Itoa(findUniques(allPrefixes)))
-			allNaviWords.WriteString(strconv.Itoa(findUniques(allInfixes)))
-			allNaviWords.WriteString(strconv.Itoa(findUniques(allSuffixes)))
+			preBool, preUnique := findUniques(allPrefixes)
+			if preBool {
+				allNaviWords.WriteString("1")
+			} else {
+				allNaviWords.WriteString("0")
+			}
+			allNaviWords.WriteString(preUnique)
+			allNaviWords.WriteString("-")
+
+			inBool, inUnique := findUniques(allInfixes)
+			if inBool {
+				allNaviWords.WriteString("1")
+			} else {
+				allNaviWords.WriteString("0")
+			}
+			allNaviWords.WriteString(inUnique)
+			allNaviWords.WriteString("-")
+
+			sufBool, sufUnique := findUniques(allSuffixes)
+			if sufBool {
+				allNaviWords.WriteString("1")
+			} else {
+				allNaviWords.WriteString("0")
+			}
+			allNaviWords.WriteString(sufUnique)
 
 			homoMapQuery := allNaviWords.String()
 
