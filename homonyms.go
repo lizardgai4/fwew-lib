@@ -689,7 +689,19 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 			results[0] = results[0][1:]
 
 			sort.Slice(results[0], func(i, j int) bool {
-				return results[0][i].Navi < results[0][j].Navi
+				if results[0][i].Navi != results[0][j].Navi {
+					return results[0][i].Navi < results[0][j].Navi
+				}
+
+				if len(results[0][i].Affixes.Prefix) != len(results[0][j].Affixes.Prefix) {
+					return len(results[0][i].Affixes.Prefix) < len(results[0][j].Affixes.Prefix)
+				}
+
+				if len(results[0][i].Affixes.Suffix) != len(results[0][j].Affixes.Suffix) {
+					return len(results[0][i].Affixes.Suffix) < len(results[0][j].Affixes.Suffix)
+				}
+
+				return len(results[0][i].Affixes.Infix) < len(results[0][j].Affixes.Infix)
 			})
 
 			var allNaviWords strings.Builder
@@ -701,24 +713,15 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 			allSuffixes := [][]string{}
 
 			for _, b := range results[0] {
-				dupe := false
-				for _, c := range noDupes {
-					if c == b.Navi {
-						dupe = true
-						break
-					}
-				}
-				if !dupe { //&& i < 3 {
-					noDupes = append(noDupes, b.Navi)
+				noDupes = append(noDupes, b.Navi)
 
-					allPrefixes = append(allPrefixes, b.Affixes.Prefix)
-					allInfixes = append(allInfixes, b.Affixes.Infix)
-					allSuffixes = append(allSuffixes, b.Affixes.Suffix)
+				allPrefixes = append(allPrefixes, b.Affixes.Prefix)
+				allInfixes = append(allInfixes, b.Affixes.Infix)
+				allSuffixes = append(allSuffixes, b.Affixes.Suffix)
 
-					/*if len(b.Affixes.Infix) > 0 {
-						infixFound = true
-					}*/
-				}
+				/*if len(b.Affixes.Infix) > 0 {
+					infixFound = true
+				}*/
 			}
 
 			for _, b := range noDupes {
@@ -726,30 +729,24 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 				allNaviWords.WriteString(" ")
 			}
 
-			var allLengthsString strings.Builder
-
-			allLengthsString.WriteString(strconv.Itoa(findUniques(allPrefixes)))
-			allLengthsString.WriteString(strconv.Itoa(findUniques(allInfixes)))
-			allLengthsString.WriteString(strconv.Itoa(findUniques(allSuffixes)))
-
-			allNaviWords.WriteString(allLengthsString.String())
+			allNaviWords.WriteString(strconv.Itoa(findUniques(allPrefixes)))
+			allNaviWords.WriteString(strconv.Itoa(findUniques(allInfixes)))
+			allNaviWords.WriteString(strconv.Itoa(findUniques(allSuffixes)))
 
 			homoMapQuery := allNaviWords.String()
 
 			// No duplicates
-			if len(noDupes) > 1 {
-				if _, ok := homoMap[homoMapQuery]; !ok {
-					homoMap[homoMapQuery] = 1
-					stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + homoMapQuery
-					fmt.Println(stringy)
-					_, err := file.WriteString(stringy + "\n")
-					if err != nil {
-						fmt.Println("Error writing to file:", err)
-						return
-					}
-
-					*tempHoms = append(*tempHoms, a.navi)
+			if _, ok := homoMap[homoMapQuery]; !ok {
+				homoMap[homoMapQuery] = 1
+				stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + homoMapQuery
+				fmt.Println(stringy)
+				_, err := file.WriteString(stringy + "\n")
+				if err != nil {
+					fmt.Println("Error writing to file:", err)
+					return
 				}
+
+				*tempHoms = append(*tempHoms, a.navi)
 			}
 		}
 		/*if len(strings.Split(a, " ")) > 1 {

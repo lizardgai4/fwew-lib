@@ -644,9 +644,6 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 							deconjugateHelper(newCandidate, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
 						}
 					}
-				} else {
-					newCandidate.word = strings.TrimSuffix(newString, oldSuffix)
-					deconjugateHelper(newCandidate, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
 				}
 			}
 		}
@@ -689,7 +686,7 @@ func deconjugateHelper(input ConjugationCandidate, prefixCheck int, suffixCheck 
 				newCandidate.word = newString
 				newCandidate.insistPOS = "n."
 				newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "o")
-				deconjugateHelper(newCandidate, newPrefixCheck, 4, unlenite, []string{}, "", "o")
+				deconjugateHelper(newCandidate, newPrefixCheck, 5, unlenite, []string{}, "", "o")
 
 				// Make sure fya'o-o is recognized
 				if vowels, ok := vowelSuffixes["o"]; ok {
