@@ -682,6 +682,12 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 		if !containsNasal {
 			continue
 		}*/
+
+		// These can clog up the search results
+		if strings.HasSuffix(a.navi, "rofa") || strings.HasSuffix(a.navi, "rofasì") {
+			continue
+		}
+
 		results, err := TranslateFromNaviHash(a.navi, true)
 
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
