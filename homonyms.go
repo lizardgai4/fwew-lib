@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -601,9 +602,14 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 }
 
 // modified from https://www.slingacademy.com/article/how-to-find-common-elements-of-2-slices-in-go/
-func findUniques(affixes [][]string) (bool, string) {
+func findUniques(affixes [][]string, reverse bool) (string) {
 	var uniques strings.Builder
-	affixPresent := false
+
+	if reverse {
+		for i, _ := range affixes {
+			slices.Reverse(affixes[i])
+		}
+	}
 
 	checked := map[string]bool{}
 
@@ -612,9 +618,6 @@ func findUniques(affixes [][]string) (bool, string) {
 		for i, a := range affixes {
 			// to the arrays after
 
-			if len(a) > 0 {
-				affixPresent = true
-			}
 			for _, b := range affixes[i+1:] {
 				for _, aPrime := range a {
 					found := false
@@ -657,7 +660,7 @@ func findUniques(affixes [][]string) (bool, string) {
 		}
 	}
 
-	return affixPresent, uniques.String()
+	return uniques.String()
 }
 
 func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
@@ -740,30 +743,17 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 				allNaviWords.WriteString(" ")
 			}
 
-			preBool, preUnique := findUniques(allPrefixes)
-			if preBool {
-				allNaviWords.WriteString("1")
-			} else {
-				allNaviWords.WriteString("0")
-			}
+			preUnique := findUniques(allPrefixes, false)
 			allNaviWords.WriteString(preUnique)
+
 			allNaviWords.WriteString("-")
 
-			inBool, inUnique := findUniques(allInfixes)
-			if inBool {
-				allNaviWords.WriteString("1")
-			} else {
-				allNaviWords.WriteString("0")
-			}
+			inUnique := findUniques(allInfixes, false)
 			allNaviWords.WriteString(inUnique)
+
 			allNaviWords.WriteString("-")
 
-			sufBool, sufUnique := findUniques(allSuffixes)
-			if sufBool {
-				allNaviWords.WriteString("1")
-			} else {
-				allNaviWords.WriteString("0")
-			}
+			sufUnique := findUniques(allSuffixes, true)
 			allNaviWords.WriteString(sufUnique)
 
 			homoMapQuery := allNaviWords.String()
@@ -926,11 +916,11 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 
 // Do everything
 func homonymSearch() {
-	fmt.Println("Stage 1:")
+	/*fmt.Println("Stage 1:")
 	StageOne()
 	fmt.Println("Stage 2:")
-	StageTwo()
+	StageTwo()*/
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 4, 50, 0)
+	StageThree(0, 5, 50, 0)
 }
