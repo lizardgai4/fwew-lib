@@ -31,6 +31,14 @@ var lenitionMap = map[string]string{
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
 var charLimit int = 14
+var changePOS = map[string]bool {
+	"tswo": true, // ability to [verb]
+	"yu": true, // [verb]er
+	"tsuk": true, //[verb]able
+	"ketsuk": true, //un[verb]able
+	"us": true, //[verb]ing (active participle only)
+	"awn": true, //[verb]ed (passive participle only)
+}
 
 //var dupeLengthsMap = map[int]int{}
 
@@ -617,7 +625,6 @@ func findUniques(affixes [][]string, reverse bool) (string) {
 		// compare all of one array
 		for i, a := range affixes {
 			// to the arrays after
-
 			for _, b := range affixes[i+1:] {
 				for _, aPrime := range a {
 					found := false
@@ -626,6 +633,14 @@ func findUniques(affixes [][]string, reverse bool) (string) {
 					}
 
 					checked[aPrime] = true
+
+					// Find kusara, kawnara, tsukkara and kestukkara
+					// also kìm, kìmyu and kìmtswo
+					if _, ok := changePOS[aPrime]; ok {
+						uniques.WriteString(aPrime)
+						continue
+					}
+
 					for _, bPrime := range b {
 						if aPrime == bPrime {
 							found = true
@@ -922,5 +937,5 @@ func homonymSearch() {
 	StageTwo()*/
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 5, 50, 0)
+	StageThree(0, 5, 14, 0)
 }
