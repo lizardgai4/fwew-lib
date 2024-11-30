@@ -549,8 +549,8 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		// Ability to [verb]
-		addToCandidates(word.Navi + "tswo")
 		reconjugateNouns(word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
+		reconjugateNouns(word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
 
 		//Lenited forms, too
 		found := false
@@ -564,8 +564,8 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) {
 			}
 		}
 		if found {
-			addToCandidates(word.Navi + "tswo")
 			reconjugateNouns(word, word.Navi+"tswo", 0, 0, -1, affixLimit-2)
+			reconjugateNouns(word, word.Navi+"yu", 0, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -937,5 +937,5 @@ func homonymSearch() {
 	StageTwo()*/
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 5, 14, 0)
+	StageThree(0, 5, 15, 0)
 }
