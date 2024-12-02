@@ -1,12 +1,14 @@
 package fwew_lib
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"log"
 	"math"
 	"os"
-	"sort"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,14 +33,18 @@ var lenitionMap = map[string]string{
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
 var charLimit int = 14
-var changePOS = map[string]bool {
-	"tswo": true, // ability to [verb]
-	"yu": true, // [verb]er
-	"tsuk": true, //[verb]able
+var changePOS = map[string]bool{
+	"tswo":   true, // ability to [verb]
+	"yu":     true, // [verb]er
+	"tsuk":   true, //[verb]able
 	"ketsuk": true, //un[verb]able
-	"us": true, //[verb]ing (active participle only)
-	"awn": true, //[verb]ed (passive participle only)
+	"us":     true, //[verb]ing (active participle only)
+	"awn":    true, //[verb]ed (passive participle only)
 }
+
+var file *os.File
+var previous *os.File
+var previousWords = map[string]bool{}
 
 //var dupeLengthsMap = map[int]int{}
 
@@ -610,7 +616,7 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 }
 
 // modified from https://www.slingacademy.com/article/how-to-find-common-elements-of-2-slices-in-go/
-func findUniques(affixes [][]string, reverse bool) (string) {
+func findUniques(affixes [][]string, reverse bool) string {
 	var uniques strings.Builder
 
 	if reverse {
@@ -678,7 +684,7 @@ func findUniques(affixes [][]string, reverse bool) (string) {
 	return uniques.String()
 }
 
-func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
+func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for _, a := range candidates {
@@ -776,9 +782,15 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 			// No duplicates
 			if _, ok := homoMap[homoMapQuery]; !ok {
 				homoMap[homoMapQuery] = 1
+
+				// No duplicates from previous
+				if _, ok := previousWords[a.navi]; ok {
+					continue
+				}
+
 				stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + homoMapQuery
-				fmt.Println(stringy)
-				_, err := file.WriteString(stringy + "\n")
+
+				err := foundResult(a.navi, stringy)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
@@ -807,17 +819,90 @@ func CheckHomsAsync(file *os.File, candidates []candidate, tempHoms *[]string, w
 	}
 }
 
+func foundResult(conjugation string, homonymfo string) error {
+	fmt.Println(homonymfo)
+	_, err := file.WriteString(homonymfo + "\n")
+	if err != nil {
+		return err
+	}
+	_, err2 := previous.WriteString(conjugation + "\n")
+	previousWords[conjugation] = true
+	return err2
+}
+
 func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
 	charLimit = charLimitSet
 	start := time.Now()
 
-	file, err := os.Create("results.txt")
-	if err != nil {
-		fmt.Println("error opening file:", err)
-		return
+	if _, err := os.Stat("results.txt"); err == nil {
+		// path/to/whatever exists
+		fmt.Println("results.txt exists.  Please rename or delete it so it's not overwritten")
+		return err
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err2 := os.Create("results.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err)
+			return err2
+		}
+		file = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not results.txt exists")
+		return err
 	}
 
 	defer file.Close()
+
+	if _, err := os.Stat("previous.txt"); err == nil {
+		// path/to/whatever exists
+		b, err2 := os.Open("previous.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err2
+		}
+
+		scanner := bufio.NewScanner(b)
+		// This will not read lines over 64k long, but works for Na'vi words just fine
+		for scanner.Scan() {
+			previousWords[scanner.Text()] = true
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		a, err := os.Create("previous.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		for key, _ := range previousWords {
+			a.WriteString(key + "\n")
+		}
+
+		previous = a
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err := os.Create("previous.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		previous = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not previous.txt exists")
+		return err
+	}
+
+	defer previous.Close()
 
 	tempHoms := []string{}
 
@@ -871,7 +956,7 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 				})
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
-				go CheckHomsAsync(file, candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
+				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
 				siTswo := strings.TrimSuffix(word.Navi, " si")
@@ -897,7 +982,7 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 				})
 				checkAsyncLock.Wait()
 				checkAsyncLock.Add(1)
-				go CheckHomsAsync(file, candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
+				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			}
 		}
 
@@ -937,5 +1022,5 @@ func homonymSearch() {
 	StageTwo()*/
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 5, 15, 0)
+	StageThree(0, 5, 14, 0)
 }
