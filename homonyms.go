@@ -759,10 +759,14 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 				}*/
 			}
 
-			for _, b := range noDupes {
+			for i, b := range noDupes {
 				allNaviWords.WriteString(b)
-				allNaviWords.WriteString(" ")
+				if i+1 < len(noDupes) {
+					allNaviWords.WriteString(" ")
+				}
 			}
+
+			allNaviWords.WriteString("] ")
 
 			preUnique := findUniques(allPrefixes, false)
 			allNaviWords.WriteString(preUnique)
@@ -784,11 +788,11 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 				homoMap[homoMapQuery] = 1
 
 				// No duplicates from previous
-				if _, ok := previousWords[a.navi]; ok {
+				if _, ok := previousWords[strings.ToLower(a.navi)]; ok {
 					continue
 				}
 
-				stringy := word.PartOfSpeech + ": -" + a.navi + " " + word.Navi + "- -" + homoMapQuery
+				stringy := word.PartOfSpeech + ": [" + a.navi + " " + word.Navi + "] [" + homoMapQuery
 
 				err := foundResult(a.navi, stringy)
 				if err != nil {
@@ -825,8 +829,9 @@ func foundResult(conjugation string, homonymfo string) error {
 	if err != nil {
 		return err
 	}
-	_, err2 := previous.WriteString(conjugation + "\n")
-	previousWords[conjugation] = true
+	lowercase := strings.ToLower(conjugation)
+	_, err2 := previous.WriteString(lowercase + "\n")
+	previousWords[strings.ToLower(lowercase)] = true
 	return err2
 }
 
@@ -1029,5 +1034,5 @@ func homonymSearch() {
 	StageTwo()*/
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 127, 127, 0)
+	StageThree(0, 127, 127, 2550)
 }
