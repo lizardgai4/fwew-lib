@@ -865,23 +865,30 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 			return err2
 		}
 
+		allWords := []string{}
+
 		scanner := bufio.NewScanner(b)
 		// This will not read lines over 64k long, but works for Na'vi words just fine
 		for scanner.Scan() {
 			previousWords[scanner.Text()] = true
+			allWords = append(allWords, scanner.Text())
 		}
 
 		if err := scanner.Err(); err != nil {
 			log.Fatal(err)
 		}
 
+		sort.Slice(allWords, func(i, j int) bool {
+			return AlphabetizeHelper(allWords[i], allWords[j])
+		})
+
 		a, err := os.Create("previous.txt")
 		if err != nil {
 			fmt.Println("error opening file:", err)
 			return err
 		}
-		for key, _ := range previousWords {
-			a.WriteString(key + "\n")
+		for _, word := range allWords {
+			a.WriteString(word + "\n")
 		}
 
 		previous = a
@@ -1022,5 +1029,5 @@ func homonymSearch() {
 	StageTwo()*/
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 5, 14, 0)
+	StageThree(0, 127, 127, 0)
 }
