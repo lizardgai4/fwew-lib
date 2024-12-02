@@ -842,7 +842,7 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 		// path/to/whatever does *not* exist
 		a, err2 := os.Create("results.txt")
 		if err2 != nil {
-			fmt.Println("error opening file:", err)
+			fmt.Println("error opening file:", err2)
 			return err2
 		}
 		file = a
@@ -860,8 +860,8 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
 		b, err2 := os.Open("previous.txt")
-		if err != nil {
-			fmt.Println("error opening file:", err)
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
 			return err2
 		}
 
