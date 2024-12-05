@@ -82,7 +82,7 @@ func DuplicateDetector(query string) bool {
 
 // Check for ones that are the exact same, no affixes needed
 func StageOne() error {
-	tempHoms := []string{}
+	file.WriteString("Stage 1:\n")
 
 	err := runOnFile(func(word Word) error {
 		standardizedWord := word.Navi
@@ -100,50 +100,22 @@ func StageOne() error {
 		// find everything lowercase
 		standardizedWord = strings.ToLower(standardizedWord)
 
-		// If the word appears more than once, record it
-		if _, ok := dictHash[standardizedWord]; ok {
-			found := false
-			for _, a := range tempHoms {
-				if a == standardizedWord {
-					found = true
-					break
-				}
-			}
-			if !found {
-				tempHoms = append(tempHoms, standardizedWord)
-			}
-		}
 		if strings.Contains(standardizedWord, "é") {
-			noAcute := strings.ReplaceAll(standardizedWord, "é", "e")
-			found := false
-			for _, a := range tempHoms {
-				if a == noAcute {
-					found = true
-					break
+			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
+		}
+
+		if _, ok := previousWords[standardizedWord]; !ok {
+			// If the word appears more than once, record it
+			if entry, ok := dictHash[standardizedWord]; ok {
+				if len(entry) > 1 {
+					query := QueryHelper(entry)
+					foundResult(standardizedWord, query)
 				}
-			}
-			if !found {
-				tempHoms = append(tempHoms, noAcute)
-				tempHoms = append(tempHoms, standardizedWord)
 			}
 		}
 
 		return nil
 	})
-
-	// Reverse the order to make accidental and new homonyms easier to see
-	// Also make it a string for easier searching
-	i := len(tempHoms)
-	for i > 0 {
-		i--
-		homonymsArray[0] += tempHoms[i]
-
-		entry := dictHash[tempHoms[i]]
-		if len(entry) > 1 {
-			query := QueryHelper(dictHash[tempHoms[i]])
-			foundResult(tempHoms[i], query)
-		}
-	}
 
 	if err != nil {
 		log.Printf("Error in homonyms stage 1: %s", err)
@@ -245,39 +217,31 @@ func QueryHelper(results []Word) string {
 
 // Check for ones that are the exact same, no affixes needed
 func StageTwo() error {
-	tempHoms := []string{}
+	file.WriteString("Stage 2:\n")
 
 	err := runOnFile(func(word Word) error {
-		standardizedWord := word.Navi
+		if _, ok := previousWords[strings.ToLower(word.Navi)]; !ok {
+			standardizedWord := word.Navi
 
-		candidates2Map[word.Navi] = 1
+			candidates2Map[word.Navi] = 1
 
-		if len(strings.Split(word.Navi, " ")) == 1 {
-			allNaviWords := ""
+			if len(strings.Split(word.Navi, " ")) == 1 {
+				allNaviWords := ""
 
-			// If the word can conjugate into something else, record it
-			results, err := TranslateFromNaviHash(standardizedWord, true)
-			if err == nil && len(results[0]) > 2 {
-				results[0] = results[0][1:]
-				allNaviWords = QueryHelper(results[0])
-				foundResult(standardizedWord, allNaviWords)
+				// If the word can conjugate into something else, record it
+				results, err := TranslateFromNaviHash(standardizedWord, true)
+				if err == nil && len(results[0]) > 2 {
+					results[0] = results[0][1:]
+					allNaviWords = QueryHelper(results[0])
+					foundResult(standardizedWord, allNaviWords)
+				}
+
+				// Lenited forms should be taken care of
 			}
-
-			// Lenited forms should be taken care of
 		}
 
 		return nil
 	})
-
-	// Reverse the order to make accidental and new homonyms easier to see
-	// Also make it a string for easier searching
-	i := len(tempHoms)
-	for i > 0 {
-		i--
-		homonymsArray[1] += tempHoms[i] + " "
-	}
-
-	homonymsArray[1] = strings.TrimSuffix(homonymsArray[1], " ")
 
 	if err != nil {
 		log.Printf("Error in homonyms stage 2: %s", err)
@@ -899,10 +863,10 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 	fmt.Println(checkedString)
 	file.WriteString(checkedString + "\n")
 
-	fmt.Println(longest)
+	/*fmt.Println(longest)
 	file.WriteString(strconv.Itoa(int(longest)) + "\n")
 	fmt.Println(top10Longest[longest])
-	file.WriteString(top10Longest[longest] + "\n")
+	file.WriteString(top10Longest[longest] + "\n")*/
 
 	//fmt.Println(dupeLengthsMap)
 
@@ -994,7 +958,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 5, 14, 0)
+	StageThree(0, 3, 14, 0)
 
 	return nil
 }
