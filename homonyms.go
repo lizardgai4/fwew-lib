@@ -136,10 +136,14 @@ func StageOne() error {
 	i := len(tempHoms)
 	for i > 0 {
 		i--
-		homonymsArray[0] += tempHoms[i] + "000 "
-	}
+		homonymsArray[0] += tempHoms[i]
 
-	homonymsArray[0] = strings.TrimSuffix(homonymsArray[0], " ")
+		entry := dictHash[tempHoms[i]]
+		if len(entry) > 1 {
+			query := QueryHelper(dictHash[tempHoms[i]])
+			foundResult(tempHoms[i], query)
+		}
+	}
 
 	if err != nil {
 		log.Printf("Error in homonyms stage 1: %s", err)
@@ -175,6 +179,68 @@ func AffixCount(word Word) string {
 	return fixes.String()
 }
 
+func QueryHelper(results []Word) string {
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Navi != results[j].Navi {
+			return results[i].Navi < results[j].Navi
+		}
+
+		if len(results[i].Affixes.Prefix) != len(results[j].Affixes.Prefix) {
+			return len(results[i].Affixes.Prefix) < len(results[j].Affixes.Prefix)
+		}
+
+		if len(results[i].Affixes.Suffix) != len(results[j].Affixes.Suffix) {
+			return len(results[i].Affixes.Suffix) < len(results[j].Affixes.Suffix)
+		}
+
+		return len(results[i].Affixes.Infix) < len(results[j].Affixes.Infix)
+	})
+
+	var allNaviWords strings.Builder
+	//infixFound := false
+	noDupes := []string{}
+
+	allPrefixes := [][]string{}
+	allInfixes := [][]string{}
+	allSuffixes := [][]string{}
+
+	for _, b := range results {
+		noDupes = append(noDupes, b.Navi)
+
+		allPrefixes = append(allPrefixes, b.Affixes.Prefix)
+		allInfixes = append(allInfixes, b.Affixes.Infix)
+		allSuffixes = append(allSuffixes, b.Affixes.Suffix)
+
+		/*if len(b.Affixes.Infix) > 0 {
+			infixFound = true
+		}*/
+	}
+
+	for i, b := range noDupes {
+		allNaviWords.WriteString(b)
+		if i+1 < len(noDupes) {
+			allNaviWords.WriteString(" ")
+		}
+	}
+
+	allNaviWords.WriteString("] ")
+
+	preUnique := findUniques(allPrefixes, false)
+	allNaviWords.WriteString(preUnique)
+
+	allNaviWords.WriteString("-")
+
+	inUnique := findUniques(allInfixes, false)
+	allNaviWords.WriteString(inUnique)
+
+	allNaviWords.WriteString("-")
+
+	sufUnique := findUniques(allSuffixes, true)
+	allNaviWords.WriteString(sufUnique)
+
+	return allNaviWords.String()
+}
+
 // Helper to turn a string into a list of known words
 
 // Check for ones that are the exact same, no affixes needed
@@ -186,70 +252,18 @@ func StageTwo() error {
 
 		candidates2Map[word.Navi] = 1
 
-		homList := []string{}
-		// If the word can conjugate into something else, record it
-		results, err := TranslateFromNaviHash(standardizedWord, true)
-		if err == nil && len(results[0]) > 2 {
-			dupes := []string{}
-
+		if len(strings.Split(word.Navi, " ")) == 1 {
 			allNaviWords := ""
-			for i, a := range results[0] {
-				if i != 0 { //&& i < 3 {
-					dupe := false
-					dupeToFind := a.Navi + AffixCount(a)
-					for _, b := range dupes {
-						if b == dupeToFind {
-							dupe = true
-							break
-						}
-					}
-					if dupe {
-						continue
-					}
 
-					dupes = append(dupes, dupeToFind)
-					tempHoms = append(tempHoms, a.Navi+AffixCount(a))
-					homList = AppendStringAlphabetically(homList, a.Navi+AffixCount(a))
-				}
-			}
-
-			if len(homList) >= 2 {
-				for _, a := range homList {
-					allNaviWords += a + " "
-				}
-
-				homoMap[allNaviWords] = 1
-				fmt.Println(strconv.Itoa(len(results[0])) + " " + allNaviWords + " " + standardizedWord)
-			}
-		}
-
-		//Lenited forms, too
-		found := false
-		for _, a := range lenitors {
-			if strings.HasPrefix(word.Navi, a) {
-				word.Navi = strings.TrimPrefix(word.Navi, a)
-				word.Navi = lenitionMap[a] + word.Navi
-				found = true
-				break
-			}
-		}
-		if found {
 			// If the word can conjugate into something else, record it
-			results, err := TranslateFromNaviHash(word.Navi, true)
+			results, err := TranslateFromNaviHash(standardizedWord, true)
 			if err == nil && len(results[0]) > 2 {
-				allNaviWords := ""
-				for i, a := range results[0] {
-					if i != 0 { //&& i < 3 {
-						tempHoms = append(tempHoms, a.Navi+AffixCount(a))
-						allNaviWords += a.Navi + AffixCount(a) + " "
-					}
-				}
-
-				if _, ok := homoMap[allNaviWords]; !ok {
-					homoMap[allNaviWords] = 1
-					fmt.Println(strconv.Itoa(len(results[0])) + " " + allNaviWords + " " + word.Navi)
-				}
+				results[0] = results[0][1:]
+				allNaviWords = QueryHelper(results[0])
+				foundResult(standardizedWord, allNaviWords)
 			}
+
+			// Lenited forms should be taken care of
 		}
 
 		return nil
@@ -689,7 +703,11 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 
 	for _, a := range candidates {
 
-		/*tempA := strings.ReplaceAll(a.navi, "nts", "")
+		/*if strings.HasSuffix(a.navi, "tsyìpna") {
+			continue
+		}
+
+		tempA := strings.ReplaceAll(a.navi, "nts", "")
 		tempA = strings.ReplaceAll(tempA, "mts", "")
 		tempA = strings.ReplaceAll(tempA, "ngts", "")
 
@@ -723,65 +741,7 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 
 			results[0] = results[0][1:]
 
-			sort.Slice(results[0], func(i, j int) bool {
-				if results[0][i].Navi != results[0][j].Navi {
-					return results[0][i].Navi < results[0][j].Navi
-				}
-
-				if len(results[0][i].Affixes.Prefix) != len(results[0][j].Affixes.Prefix) {
-					return len(results[0][i].Affixes.Prefix) < len(results[0][j].Affixes.Prefix)
-				}
-
-				if len(results[0][i].Affixes.Suffix) != len(results[0][j].Affixes.Suffix) {
-					return len(results[0][i].Affixes.Suffix) < len(results[0][j].Affixes.Suffix)
-				}
-
-				return len(results[0][i].Affixes.Infix) < len(results[0][j].Affixes.Infix)
-			})
-
-			var allNaviWords strings.Builder
-			//infixFound := false
-			noDupes := []string{}
-
-			allPrefixes := [][]string{}
-			allInfixes := [][]string{}
-			allSuffixes := [][]string{}
-
-			for _, b := range results[0] {
-				noDupes = append(noDupes, b.Navi)
-
-				allPrefixes = append(allPrefixes, b.Affixes.Prefix)
-				allInfixes = append(allInfixes, b.Affixes.Infix)
-				allSuffixes = append(allSuffixes, b.Affixes.Suffix)
-
-				/*if len(b.Affixes.Infix) > 0 {
-					infixFound = true
-				}*/
-			}
-
-			for i, b := range noDupes {
-				allNaviWords.WriteString(b)
-				if i+1 < len(noDupes) {
-					allNaviWords.WriteString(" ")
-				}
-			}
-
-			allNaviWords.WriteString("] ")
-
-			preUnique := findUniques(allPrefixes, false)
-			allNaviWords.WriteString(preUnique)
-
-			allNaviWords.WriteString("-")
-
-			inUnique := findUniques(allInfixes, false)
-			allNaviWords.WriteString(inUnique)
-
-			allNaviWords.WriteString("-")
-
-			sufUnique := findUniques(allSuffixes, true)
-			allNaviWords.WriteString(sufUnique)
-
-			homoMapQuery := allNaviWords.String()
+			homoMapQuery := QueryHelper(results[0])
 
 			// No duplicates
 			if _, ok := homoMap[homoMapQuery]; !ok {
@@ -838,83 +798,6 @@ func foundResult(conjugation string, homonymfo string) error {
 func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
 	charLimit = charLimitSet
 	start := time.Now()
-
-	if _, err := os.Stat("results.txt"); err == nil {
-		// path/to/whatever exists
-		fmt.Println("results.txt exists.  Please rename or delete it so it's not overwritten")
-		return err
-	} else if errors.Is(err, os.ErrNotExist) {
-		// path/to/whatever does *not* exist
-		a, err2 := os.Create("results.txt")
-		if err2 != nil {
-			fmt.Println("error opening file:", err2)
-			return err2
-		}
-		file = a
-	} else {
-		// Schrodinger: file may or may not exist. See err for details.
-
-		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
-
-		fmt.Println("An error occured determining whether or not results.txt exists")
-		return err
-	}
-
-	defer file.Close()
-
-	if _, err := os.Stat("previous.txt"); err == nil {
-		// path/to/whatever exists
-		b, err2 := os.Open("previous.txt")
-		if err2 != nil {
-			fmt.Println("error opening file:", err2)
-			return err2
-		}
-
-		allWords := []string{}
-
-		scanner := bufio.NewScanner(b)
-		// This will not read lines over 64k long, but works for Na'vi words just fine
-		for scanner.Scan() {
-			previousWords[scanner.Text()] = true
-			allWords = append(allWords, scanner.Text())
-		}
-
-		if err := scanner.Err(); err != nil {
-			log.Fatal(err)
-		}
-
-		sort.Slice(allWords, func(i, j int) bool {
-			return AlphabetizeHelper(allWords[i], allWords[j])
-		})
-
-		a, err := os.Create("previous.txt")
-		if err != nil {
-			fmt.Println("error opening file:", err)
-			return err
-		}
-		for _, word := range allWords {
-			a.WriteString(word + "\n")
-		}
-
-		previous = a
-	} else if errors.Is(err, os.ErrNotExist) {
-		// path/to/whatever does *not* exist
-		a, err := os.Create("previous.txt")
-		if err != nil {
-			fmt.Println("error opening file:", err)
-			return err
-		}
-		previous = a
-	} else {
-		// Schrodinger: file may or may not exist. See err for details.
-
-		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
-
-		fmt.Println("An error occured determining whether or not previous.txt exists")
-		return err
-	}
-
-	defer previous.Close()
 
 	tempHoms := []string{}
 
@@ -1027,12 +910,91 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 }
 
 // Do everything
-func homonymSearch() {
-	/*fmt.Println("Stage 1:")
+func homonymSearch() error {
+	if _, err := os.Stat("results.txt"); err == nil {
+		// path/to/whatever exists
+		fmt.Println("results.txt exists.  Please rename or delete it so it's not overwritten")
+		return err
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err2 := os.Create("results.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
+			return err2
+		}
+		file = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not results.txt exists")
+		return err
+	}
+
+	defer file.Close()
+
+	if _, err := os.Stat("previous.txt"); err == nil {
+		// path/to/whatever exists
+		b, err2 := os.Open("previous.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
+			return err2
+		}
+
+		allWords := []string{}
+
+		scanner := bufio.NewScanner(b)
+		// This will not read lines over 64k long, but works for Na'vi words just fine
+		for scanner.Scan() {
+			previousWords[scanner.Text()] = true
+			allWords = append(allWords, scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		sort.Slice(allWords, func(i, j int) bool {
+			return AlphabetizeHelper(allWords[i], allWords[j])
+		})
+
+		a, err := os.Create("previous.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		for _, word := range allWords {
+			a.WriteString(word + "\n")
+		}
+
+		previous = a
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err := os.Create("previous.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		previous = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not previous.txt exists")
+		return err
+	}
+
+	defer previous.Close()
+
+	fmt.Println("Stage 1:")
 	StageOne()
 	fmt.Println("Stage 2:")
-	StageTwo()*/
+	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 127, 127, 2550)
+	StageThree(0, 5, 14, 0)
+
+	return nil
 }
