@@ -42,7 +42,7 @@ var changePOS = map[string]bool{
 	"awn":    true, //[verb]ed (passive participle only)
 }
 
-var file *os.File
+var resultsFile *os.File
 var previous *os.File
 var previousWords = map[string]bool{}
 
@@ -82,7 +82,7 @@ func DuplicateDetector(query string) bool {
 
 // Check for ones that are the exact same, no affixes needed
 func StageOne() error {
-	file.WriteString("Stage 1:\n")
+	resultsFile.WriteString("Stage 1:\n")
 
 	err := runOnFile(func(word Word) error {
 		standardizedWord := word.Navi
@@ -217,7 +217,7 @@ func QueryHelper(results []Word) string {
 
 // Check for ones that are the exact same, no affixes needed
 func StageTwo() error {
-	file.WriteString("Stage 2:\n")
+	resultsFile.WriteString("Stage 2:\n")
 
 	err := runOnFile(func(word Word) error {
 		if _, ok := previousWords[strings.ToLower(word.Navi)]; !ok {
@@ -749,7 +749,7 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 
 func foundResult(conjugation string, homonymfo string) error {
 	fmt.Println(homonymfo)
-	_, err := file.WriteString(homonymfo + "\n")
+	_, err := resultsFile.WriteString(homonymfo + "\n")
 	if err != nil {
 		return err
 	}
@@ -767,7 +767,7 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 
 	wordCount := 0
 
-	file.WriteString("Stage 3\n")
+	resultsFile.WriteString("Stage 3\n")
 
 	err = RunOnDict(func(word Word) error {
 		wordCount += 1
@@ -784,7 +784,7 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(len(candidates2Map)) + " conjugations checked"
 
 				log.Printf(printMessage)
-				file.WriteString(printMessage + "\n")
+				resultsFile.WriteString(printMessage + "\n")
 			}
 			// save original Navi word, we want to add "+" or "--" later again
 			//naviWord := word.Navi
@@ -857,16 +857,16 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 		strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
 		strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds"
 	log.Printf(finalString)
-	file.WriteString(finalString + "\n")
+	resultsFile.WriteString(finalString + "\n")
 
 	checkedString := "Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations"
 	fmt.Println(checkedString)
-	file.WriteString(checkedString + "\n")
+	resultsFile.WriteString(checkedString + "\n")
 
 	/*fmt.Println(longest)
-	file.WriteString(strconv.Itoa(int(longest)) + "\n")
+	resultsFile.WriteString(strconv.Itoa(int(longest)) + "\n")
 	fmt.Println(top10Longest[longest])
-	file.WriteString(top10Longest[longest] + "\n")*/
+	resultsFile.WriteString(top10Longest[longest] + "\n")*/
 
 	//fmt.Println(dupeLengthsMap)
 
@@ -886,7 +886,7 @@ func homonymSearch() error {
 			fmt.Println("error opening file:", err2)
 			return err2
 		}
-		file = a
+		resultsFile = a
 	} else {
 		// Schrodinger: file may or may not exist. See err for details.
 
@@ -895,8 +895,6 @@ func homonymSearch() error {
 		fmt.Println("An error occured determining whether or not results.txt exists")
 		return err
 	}
-
-	defer file.Close()
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
@@ -950,15 +948,18 @@ func homonymSearch() error {
 		return err
 	}
 
-	defer previous.Close()
-
 	fmt.Println("Stage 1:")
 	StageOne()
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 3, 14, 0)
+	StageThree(0, 4, 14, 0)
+
+	// Make sure no thread is left running first
+	checkAsyncLock.Wait()
+	resultsFile.Close()
+	previous.Close()
 
 	return nil
 }
