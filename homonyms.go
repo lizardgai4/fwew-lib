@@ -851,6 +851,9 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 	//fmt.Println(homoMap)
 	//fmt.Println(tempHoms)
 
+	// Make sure no thread is left running first
+	checkAsyncLock.Wait()
+
 	total_seconds := time.Since(start)
 
 	finalString := "Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
@@ -895,6 +898,8 @@ func homonymSearch() error {
 		fmt.Println("An error occured determining whether or not results.txt exists")
 		return err
 	}
+
+	defer resultsFile.Close()
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
@@ -948,6 +953,8 @@ func homonymSearch() error {
 		return err
 	}
 
+	defer previous.Close()
+
 	fmt.Println("Stage 1:")
 	StageOne()
 	fmt.Println("Stage 2:")
@@ -955,11 +962,6 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
 	StageThree(0, 4, 14, 0)
-
-	// Make sure no thread is left running first
-	checkAsyncLock.Wait()
-	resultsFile.Close()
-	previous.Close()
 
 	return nil
 }
