@@ -16,7 +16,8 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 []candidate
+var candidates2 Queue = *CreateQueue(200000000)
+var candidates2slice []candidate
 var candidates2Map = map[string]int{}
 var homoMap = map[string]int{}
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
@@ -30,8 +31,11 @@ var lenitionMap = map[string]string{
 	"kx": "k",
 	"'":  "",
 }
+
+/*
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
+*/
 var charLimit int = 14
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
@@ -49,10 +53,11 @@ var previousWords = map[string]bool{}
 //var dupeLengthsMap = map[int]int{}
 
 var checkAsyncLock = sync.WaitGroup{}
+var finished = queueFinished{false, sync.Mutex{}}
 
-type tempHomsContainer struct {
+type queueFinished struct {
+	finished bool
 	mu       sync.Mutex
-	counters []string
 }
 
 type candidate struct {
@@ -60,10 +65,47 @@ type candidate struct {
 	length uint8
 }
 
-func (c *tempHomsContainer) addTempHom(name string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.counters = append(c.counters, name)
+type Queue struct {
+	mu       sync.Mutex
+	capacity int
+	q        []string
+}
+
+// FifoQueue
+type FifoQueue interface {
+	Insert()
+	Remove()
+}
+
+// Insert inserts the item into the queue
+func (q *Queue) Insert(item string) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if len(q.q) < int(q.capacity) {
+		q.q = append(q.q, item)
+		return nil
+	}
+	return errors.New("Queue is full")
+}
+
+// Remove removes the oldest element from the queue
+func (q *Queue) Remove() (string, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if len(q.q) > 0 {
+		item := q.q[0]
+		q.q = q.q[1:]
+		return item, nil
+	}
+	return "", errors.New("Queue is empty")
+}
+
+// CreateQueue creates an empty queue with desired capacity
+func CreateQueue(capacity int) *Queue {
+	return &Queue{
+		capacity: capacity,
+		q:        make([]string, 0, capacity),
+	}
 }
 
 func DuplicateDetector(query string) bool {
@@ -257,7 +299,7 @@ func StageTwo() error {
 func addToCandidates(candidate1 string) {
 	newLength := len([]rune(candidate1))
 	if _, ok := candidates2Map[candidate1]; !ok && newLength <= charLimit {
-		candidates2 = append(candidates2, candidate{navi: candidate1, length: uint8(newLength)})
+		candidates2slice = append(candidates2slice, candidate{navi: candidate1, length: uint8(newLength)})
 		candidates2Map[candidate1] = 1
 	} /*else {
 		runelen := len([]rune(candidate1))
@@ -662,10 +704,14 @@ func findUniques(affixes [][]string, reverse bool) string {
 	return uniques.String()
 }
 
-func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAffix int, wg *sync.WaitGroup) {
-	defer wg.Done()
+func CheckHomsAsync(minAffix int) {
+	makingFinished := false
+	for len(candidates2.q) > 0 || !makingFinished {
+		a, _ := candidates2.Remove()
 
-	for _, a := range candidates {
+		if a == "" {
+			continue
+		}
 
 		/*if strings.HasSuffix(a.navi, "tsyìpna") {
 			continue
@@ -695,11 +741,11 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 		}*/
 
 		// These can clog up the search results
-		if strings.HasSuffix(a.navi, "rofa") || strings.HasSuffix(a.navi, "rofasì") {
+		if strings.HasSuffix(a, "rofa") || strings.HasSuffix(a, "rofasì") {
 			continue
 		}
 
-		results, err := TranslateFromNaviHash(a.navi, true)
+		results, err := TranslateFromNaviHash(a, true)
 
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 
@@ -712,19 +758,17 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 				homoMap[homoMapQuery] = 1
 
 				// No duplicates from previous
-				if _, ok := previousWords[strings.ToLower(a.navi)]; ok {
+				if _, ok := previousWords[strings.ToLower(a)]; ok {
 					continue
 				}
 
-				stringy := word.PartOfSpeech + ": [" + a.navi + " " + word.Navi + "] [" + homoMapQuery
+				stringy := "[" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
 
-				err := foundResult(a.navi, stringy)
+				err := foundResult(a, stringy)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
 				}
-
-				*tempHoms = append(*tempHoms, a.navi)
 			}
 		}
 		/*if len(strings.Split(a, " ")) > 1 {
@@ -744,6 +788,10 @@ func CheckHomsAsync(candidates []candidate, tempHoms *[]string, word Word, minAf
 		} else {
 			top10Longest[runeCount] = a.navi
 		}*/
+
+		finished.mu.Lock()
+		makingFinished = finished.finished
+		finished.mu.Unlock()
 	}
 }
 
@@ -759,21 +807,16 @@ func foundResult(conjugation string, homonymfo string) error {
 	return err2
 }
 
-func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
-	charLimit = charLimitSet
-	start := time.Now()
-
-	tempHoms := []string{}
-
+func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	wordCount := 0
 
-	resultsFile.WriteString("Stage 3\n")
-
-	err = RunOnDict(func(word Word) error {
+	err := RunOnDict(func(word Word) error {
 		wordCount += 1
 		//checkAsyncLock.Wait()
 
 		if wordCount >= startNumber {
+			candidates2slice = []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
+
 			// Progress counter
 			if wordCount%100 == 0 {
 				total_seconds := time.Since(start)
@@ -786,16 +829,12 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 				log.Printf(printMessage)
 				resultsFile.WriteString(printMessage + "\n")
 			}
-			// save original Navi word, we want to add "+" or "--" later again
-			//naviWord := word.Navi
 
 			// No multiword words
 			if !strings.Contains(word.Navi, " ") {
-				candidates2 = []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
 				// Get conjugations
 				reconjugate(word, true, affixLimit)
-
 				//Lenited forms, too
 				found := false
 				for _, a := range lenitors {
@@ -810,12 +849,9 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 					reconjugate(word, false, affixLimit)
 				}
 
-				sort.SliceStable(candidates2, func(i, j int) bool {
-					return candidates2[i].length < candidates2[j].length
+				sort.SliceStable(candidates2slice, func(i, j int) bool {
+					return candidates2slice[i].length < candidates2slice[j].length
 				})
-				checkAsyncLock.Wait()
-				checkAsyncLock.Add(1)
-				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
 				siTswo := strings.TrimSuffix(word.Navi, " si")
@@ -836,17 +872,34 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 					reconjugateNouns(word, siTswo, 0, 0, -1, affixLimit)
 				}
 
-				sort.SliceStable(candidates2, func(i, j int) bool {
-					return candidates2[i].length < candidates2[j].length
+				sort.SliceStable(candidates2slice, func(i, j int) bool {
+					return candidates2slice[i].length < candidates2slice[j].length
 				})
-				checkAsyncLock.Wait()
-				checkAsyncLock.Add(1)
-				go CheckHomsAsync(candidates2, &tempHoms, word, minAffix, &checkAsyncLock)
+			}
+
+			for _, a := range candidates2slice {
+				candidates2.Insert(a.navi)
 			}
 		}
 
 		return nil
 	})
+
+	finished.mu.Lock()
+	finished.finished = true
+	finished.mu.Unlock()
+
+	return err
+}
+
+func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
+	charLimit = charLimitSet
+	start := time.Now()
+
+	resultsFile.WriteString("Stage 3\n")
+
+	go makeHomsAsync(affixLimit, startNumber, start)
+	CheckHomsAsync(minAffix)
 
 	//fmt.Println(homoMap)
 	//fmt.Println(tempHoms)
