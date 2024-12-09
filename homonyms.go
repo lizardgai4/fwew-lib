@@ -16,7 +16,7 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 Queue = *CreateQueue(200000000)
+var candidates2 Queue = *CreateQueue(500000)
 var candidates2slice []candidate
 var candidates2Map = map[string]int{}
 var homoMap = map[string]int{}
@@ -705,12 +705,24 @@ func findUniques(affixes [][]string, reverse bool) string {
 }
 
 func CheckHomsAsync(minAffix int) {
+	wait := false
+	start2 := time.Now()
 	makingFinished := false
 	for len(candidates2.q) > 0 || !makingFinished {
 		a, _ := candidates2.Remove()
 
 		if a == "" {
+			if !wait {
+				start2 = time.Now()
+				wait = true
+				continue
+			}
 			continue
+		}
+
+		if wait {
+			wait = false
+			fmt.Println("Checking thread waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms")
 		}
 
 		/*if strings.HasSuffix(a.navi, "tsyìpna") {
@@ -817,9 +829,11 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 
 		if wordCount >= startNumber {
 			if !add {
-				for len(candidates2.q) > 1000 {
+				//start2 := time.Now()
+				for len(candidates2.q) > 5000 {
 					time.Sleep(time.Millisecond)
 				}
+				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms")
 				add = true
 			}
 
@@ -886,10 +900,13 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			}
 
 			for _, a := range candidates2slice {
-				candidates2.Insert(a.navi)
+				err3 := candidates2.Insert(a.navi)
+				if err3 != nil {
+					fmt.Println(err3)
+				}
 			}
 
-			if len(candidates2.q) > 2000 {
+			if len(candidates2.q) > 50000 {
 				add = false
 			}
 		}
@@ -1026,7 +1043,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 2, 14, 0)
+	StageThree(0, 4, 14, 0)
 
 	return nil
 }
