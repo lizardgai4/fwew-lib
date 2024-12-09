@@ -52,7 +52,6 @@ var previousWords = map[string]bool{}
 
 //var dupeLengthsMap = map[int]int{}
 
-var checkAsyncLock = sync.WaitGroup{}
 var finished = queueFinished{false, sync.Mutex{}}
 
 type queueFinished struct {
@@ -932,9 +931,6 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 
 	//fmt.Println(homoMap)
 	//fmt.Println(tempHoms)
-
-	// Make sure no thread is left running first
-	checkAsyncLock.Wait()
 
 	total_seconds := time.Since(start)
 
