@@ -818,7 +818,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 		if wordCount >= startNumber {
 			if !add {
 				for len(candidates2.q) > 1000 {
-					time.Sleep(time.Second / 100)
+					time.Sleep(time.Millisecond)
 				}
 				add = true
 			}
