@@ -705,6 +705,7 @@ func findUniques(affixes [][]string, reverse bool) string {
 
 func CheckHomsAsync(minAffix int) {
 	wait := false
+	firstWait := true
 	start2 := time.Now()
 	makingFinished := false
 	for len(candidates2.q) > 0 || !makingFinished {
@@ -721,7 +722,14 @@ func CheckHomsAsync(minAffix int) {
 
 		if wait {
 			wait = false
-			fmt.Println("Checking thread waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms")
+			waitedString := "Checking thread waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+			if !firstWait {
+				waitedString += "\nThis should only have happened at the beginning"
+			} else {
+				firstWait = false
+			}
+			fmt.Println(waitedString)
+			resultsFile.WriteString(waitedString + "\n")
 		}
 
 		/*if strings.HasSuffix(a.navi, "tsyìpna") {
@@ -829,7 +837,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 		if wordCount >= startNumber {
 			if !add {
 				//start2 := time.Now()
-				for len(candidates2.q) > 5000 {
+				for len(candidates2.q) > 7000 {
 					time.Sleep(time.Millisecond)
 				}
 				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms")
@@ -925,6 +933,10 @@ func StageThree(minAffix int, affixLimit int8, charLimitSet int, startNumber int
 	start := time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
+
+	if startNumber > len(dictHash) {
+		return errors.New("startNumber is longer than the provided dictionary")
+	}
 
 	go makeHomsAsync(affixLimit, startNumber, start)
 	CheckHomsAsync(minAffix)
@@ -1039,7 +1051,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 4, 14, 0)
+	StageThree(0, 127, 127, 1099)
 
 	return nil
 }
