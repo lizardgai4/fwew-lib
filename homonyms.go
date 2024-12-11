@@ -828,22 +828,12 @@ func foundResult(conjugation string, homonymfo string) error {
 
 func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	wordCount := 0
-	add := true
 
 	err := RunOnDict(func(word Word) error {
 		wordCount += 1
 		//checkAsyncLock.Wait()
 
 		if wordCount >= startNumber {
-			if !add {
-				//start2 := time.Now()
-				for len(candidates2.q) > 7000 {
-					time.Sleep(time.Millisecond)
-				}
-				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms")
-				add = true
-			}
-
 			candidates2slice = []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
 			// Progress counter
@@ -906,15 +896,19 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				})
 			}
 
+			if len(candidates2.q) > 50000 {
+				//start2 := time.Now()
+				for len(candidates2.q) > 7000 {
+					time.Sleep(time.Millisecond * 5)
+				}
+				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+			}
+
 			for _, a := range candidates2slice {
 				err3 := candidates2.Insert(a.navi)
 				if err3 != nil {
 					fmt.Println(err3)
 				}
-			}
-
-			if len(candidates2.q) > 50000 {
-				add = false
 			}
 		}
 
@@ -1051,7 +1045,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 127, 127, 1099)
+	StageThree(0, 4, 14, 0)
 
 	return nil
 }
