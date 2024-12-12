@@ -828,6 +828,7 @@ func foundResult(conjugation string, homonymfo string) error {
 
 func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	wordCount := 0
+	attempts := 0
 
 	err := RunOnDict(func(word Word) error {
 		wordCount += 1
@@ -898,7 +899,9 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 
 			if len(candidates2.q) > 50000 {
 				//start2 := time.Now()
-				for len(candidates2.q) > 7000 {
+				// Tests shows that 12200 is a great number to
+				// prevent it from reaching 100% or 0% capacity
+				for len(candidates2.q) > 12200 {
 					time.Sleep(time.Millisecond * 5)
 				}
 				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
@@ -907,7 +910,20 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			for _, a := range candidates2slice {
 				err3 := candidates2.Insert(a.navi)
 				if err3 != nil {
-					fmt.Println(err3)
+					//fmt.Println(err3)
+					attempts++
+					for err3 != nil {
+						err3 = candidates2.Insert(a.navi)
+					}
+					total_seconds := time.Since(start)
+
+					printMessage := strconv.Itoa(attempts) + " words waited in line.  Time elapsed is " +
+						strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+						strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
+						strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(len(candidates2Map)) + " conjugations checked"
+
+					log.Printf(printMessage)
+					resultsFile.WriteString(printMessage + "\n")
 				}
 			}
 		}
@@ -1045,7 +1061,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 4, 14, 0)
+	StageThree(0, 127, 127, 0)
 
 	return nil
 }
