@@ -1044,7 +1044,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(0, 127, 127, 0)
+	StageThree(0, 3, 14, 0)
 
 	return nil
 }
