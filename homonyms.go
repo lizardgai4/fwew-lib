@@ -744,7 +744,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		if wait {
 			wait = false
-			waitedString := "Checking thread waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+			waitedString := "Dictionary " + strconv.Itoa(int(dict.dictNum)) + " waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
 			if !firstWait {
 				waitedString += "\nThis should only have happened at the beginning"
 			} else {
@@ -806,7 +806,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 					continue
 				}
 
-				stringy := "[" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
+				stringy := "dict " + strconv.Itoa(int(dict.dictNum)) + ": [" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
 
 				err := foundResult(a, stringy)
 				if err != nil {
@@ -1085,9 +1085,9 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
-		dictArray = append(dictArray, FwewDictInit())
+		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
 
 	fmt.Println("Stage 1:")
@@ -1096,7 +1096,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(dictCount, 0, 4, 14, 0)
+	StageThree(dictCount, 0, 127, 127, 0)
 
 	return nil
 }

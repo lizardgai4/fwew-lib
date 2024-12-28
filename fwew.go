@@ -58,18 +58,20 @@ var romanization2 = map[string]string{
 type FwewDict struct {
 	dictionary []Word
 	dictHash   map[string][]Word
+	dictNum    uint8
 }
 
-func FwewDictInit() *FwewDict {
+func FwewDictInit(dictNum uint8) *FwewDict {
 	var newDict FwewDict
 
+	newDict.dictNum = dictNum
 	copy(newDict.dictionary, dictionary)
 	//copy a map
 	newDict.dictHash = map[string][]Word{}
 	for key, val := range dictHash {
 		newDict.dictHash[key] = val
 	}
-	fmt.Println(len(newDict.dictHash))
+	fmt.Println("Dictionary " + strconv.Itoa(int(dictNum)) + " ready")
 
 	return &newDict
 }
