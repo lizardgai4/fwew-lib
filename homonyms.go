@@ -36,6 +36,7 @@ var lenitionMap = map[string]string{
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
 */
+var totalCandidates int = 0
 var charLimit int = 14
 var charLimitMap int = 14
 var changePOS = map[string]bool{
@@ -314,6 +315,7 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	}
 	if _, ok := candidates2Map[candidate1]; !ok {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
+		totalCandidates++
 		if newLength <= charLimitMap {
 			candidates2Map[candidate1] = 1
 		}
@@ -879,7 +881,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				printMessage := "On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
 					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(len(candidates2Map)) + " conjugations checked"
+					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(totalCandidates) + " conjugations checked"
 
 				log.Printf(printMessage)
 				resultsFile.WriteString(printMessage + "\n")
