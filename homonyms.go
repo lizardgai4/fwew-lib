@@ -1098,7 +1098,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1111,7 +1111,7 @@ func homonymSearch() error {
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length,
 	// minimum word length for the duplicate table, maximum word length for the duplicate table,
 	// start at word number N
-	StageThree(dictCount, 0, 127, 127, 8, 127, 0)
+	StageThree(dictCount, 0, 5, 14, 0, 127, 0)
 
 	return nil
 }
