@@ -18,7 +18,7 @@ import (
 var homonymsArray = []string{"", "", ""}
 var candidates2 Queue = *CreateQueue(30000)
 var candidates2slice []candidate
-var candidates2Map = map[string]int{}
+var candidates2Map = map[string]bool{}
 var homoMap = HomoMapStruct{}
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
 var lenitionMap = map[string]string{
@@ -277,7 +277,7 @@ func StageTwo() error {
 		if _, ok := previousWords[strings.ToLower(word.Navi)]; !ok {
 			standardizedWord := word.Navi
 
-			candidates2Map[word.Navi] = 1
+			candidates2Map[word.Navi] = true
 
 			if len(strings.Split(word.Navi, " ")) == 1 {
 				allNaviWords := ""
@@ -317,7 +317,7 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
 		totalCandidates++
 		if newLength <= charLimitMap {
-			candidates2Map[candidate1] = 1
+			candidates2Map[candidate1] = true
 		}
 	} /*else {
 		runelen := len([]rune(candidate1))
@@ -1104,8 +1104,9 @@ func homonymSearch() error {
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
-	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, maximum word length for the duplicate table, start at word number N
-	StageThree(dictCount, 0, 127, 127, 14, 0)
+	// number of dictionaries, minimum affixes, maximum affixes, maximum word length,
+	// maximum word length for the duplicate table, start at word number N
+	StageThree(dictCount, 0, 127, 127, 34, 0)
 
 	return nil
 }
