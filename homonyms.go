@@ -38,6 +38,7 @@ var longest uint8 = 0
 */
 var totalCandidates int = 0
 var charLimit int = 14
+var charMinMap int = 0
 var charLimitMap int = 14
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
@@ -310,23 +311,25 @@ func StageTwo() error {
 // For StageThree, this adds things to the candidates
 func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	newLength := len([]rune(candidate1))
+	// Is it longer than the words we want to check?
 	if newLength > charLimit {
 		return candidates
 	}
+
+	// Is it too long or short for the duplicate detection map?
+	if newLength > charLimitMap || newLength < charMinMap {
+		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
+		totalCandidates++
+		return candidates
+	}
+
+	// If it's in the range, is it good?
 	if _, ok := candidates2Map[candidate1]; !ok {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
 		totalCandidates++
-		if newLength <= charLimitMap {
-			candidates2Map[candidate1] = true
-		}
-	} /*else {
-		runelen := len([]rune(candidate1))
-		if _, ok := dupeLengthsMap[runelen]; ok {
-			dupeLengthsMap[runelen] = dupeLengthsMap[runelen] + 1
-		} else {
-			dupeLengthsMap[runelen] = 1
-		}
-	}*/
+		candidates2Map[candidate1] = true
+	}
+
 	return candidates
 }
 
@@ -957,12 +960,13 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, charLimitMapSet int, startNumber int) (err error) {
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, charMinMapSet int, charLimitMapSet int, startNumber int) (err error) {
 	homoMap.mu.Lock()
 	homoMap.homoMap = map[string]int{}
 	homoMap.mu.Unlock()
 
 	charLimit = charLimitSet
+	charMinMap = charMinMapSet
 	charLimitMap = charLimitMapSet
 	start := time.Now()
 
@@ -1105,8 +1109,9 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length,
-	// maximum word length for the duplicate table, start at word number N
-	StageThree(dictCount, 0, 127, 127, 34, 0)
+	// minimum word length for the duplicate table, maximum word length for the duplicate table,
+	// start at word number N
+	StageThree(dictCount, 0, 127, 127, 8, 127, 0)
 
 	return nil
 }
