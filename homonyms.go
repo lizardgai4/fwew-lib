@@ -37,6 +37,7 @@ var top10Longest = map[uint8]string{}
 var longest uint8 = 0
 */
 var charLimit int = 14
+var charLimitMap int = 14
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
 	"yu":     true, // [verb]er
@@ -308,9 +309,14 @@ func StageTwo() error {
 // For StageThree, this adds things to the candidates
 func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	newLength := len([]rune(candidate1))
-	if _, ok := candidates2Map[candidate1]; !ok && newLength <= charLimit {
+	if newLength > charLimit {
+		return candidates
+	}
+	if _, ok := candidates2Map[candidate1]; !ok {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
-		candidates2Map[candidate1] = 1
+		if newLength <= charLimitMap {
+			candidates2Map[candidate1] = 1
+		}
 	} /*else {
 		runelen := len([]rune(candidate1))
 		if _, ok := dupeLengthsMap[runelen]; ok {
@@ -949,12 +955,13 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, charLimitMapSet int, startNumber int) (err error) {
 	homoMap.mu.Lock()
 	homoMap.homoMap = map[string]int{}
 	homoMap.mu.Unlock()
 
 	charLimit = charLimitSet
+	charLimitMap = charLimitMapSet
 	start := time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
@@ -1095,8 +1102,8 @@ func homonymSearch() error {
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
-	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(dictCount, 0, 127, 127, 0)
+	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, maximum word length for the duplicate table, start at word number N
+	StageThree(dictCount, 0, 127, 127, 14, 0)
 
 	return nil
 }
