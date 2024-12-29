@@ -375,14 +375,22 @@ func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, pre
 	case 3:
 		// This one will demand this makes it use lenition
 		lenited := inputNavi
-		if unlenite == -1 {
-			for _, element := range append(prefixes1lenition, "tsay") {
-				// If it has a lenition-causing prefix
-
-				// regardless of whether or not it's found
-				lenited2 := element + lenited
-				reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
+		if unlenite == 0 {
+			for _, a := range lenitors {
+				if strings.HasPrefix(lenited, a) {
+					lenited = strings.TrimPrefix(lenited, a)
+					lenited = lenitionMap[a] + lenited
+					break
+				}
 			}
+		}
+
+		for _, element := range append(prefixes1lenition, "tsay") {
+			// If it has a lenition-causing prefix
+
+			// regardless of whether or not it's found
+			lenited2 := element + lenited
+			reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
 		}
 		fallthrough
 	case 4:
@@ -549,7 +557,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 		//Lenited forms, too
 		if found {
 			candidatesSlice = addToCandidates(candidatesSlice, lenited)
-			reconjugateNouns(&candidatesSlice, word, lenited, 0, 0, -1, affixLimit-1)
+			reconjugateNouns(&candidatesSlice, word, lenited, 10, 0, -1, affixLimit-1)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit)
@@ -593,7 +601,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 
 			//Lenited forms, too
 			candidatesSlice = addToCandidates(candidatesSlice, lenitedGerund)
-			reconjugateNouns(&candidatesSlice, word, lenitedGerund, 0, 0, -1, affixLimit-1)
+			reconjugateNouns(&candidatesSlice, word, lenitedGerund, 10, 0, -1, affixLimit-1)
 		}
 		// Ability to [verb]
 		reconjugateNouns(&candidatesSlice, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
@@ -601,8 +609,8 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 
 		//Lenited forms, too
 		if found {
-			reconjugateNouns(&candidatesSlice, word, lenited+"tswo", 0, 0, -1, affixLimit-2)
-			reconjugateNouns(&candidatesSlice, word, lenited+"yu", 0, 0, -1, affixLimit-2)
+			reconjugateNouns(&candidatesSlice, word, lenited+"tswo", 10, 0, -1, affixLimit-2)
+			reconjugateNouns(&candidatesSlice, word, lenited+"yu", 10, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -891,7 +899,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 					if strings.HasPrefix(word.Navi, a) {
 						lenitedTswo := strings.TrimPrefix(word.Navi, a)
 						lenitedTswo = lenitionMap[a] + lenitedTswo
-						reconjugateNouns(&candidates2slice, word, lenitedTswo, 0, 0, -1, affixLimit)
+						reconjugateNouns(&candidates2slice, word, lenitedTswo, 10, 0, -1, affixLimit)
 						break
 					}
 				}
