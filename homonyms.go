@@ -40,6 +40,7 @@ var totalCandidates int = 0
 var charLimit int = 14
 var charMinMap int = 0
 var charLimitMap int = 14
+var minCharStopConjugatingDupes int = 14
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
 	"yu":     true, // [verb]er
@@ -340,8 +341,16 @@ func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, pre
 		return nil
 	}
 
-	if len([]rune(inputNavi)) > charLimit {
+	runeLen := len([]rune(inputNavi))
+
+	if runeLen > charLimit {
 		return nil
+	}
+
+	if runeLen >= minCharStopConjugatingDupes {
+		if _, ok := candidates2Map[inputNavi]; ok {
+			return nil
+		}
 	}
 
 	*candidates = addToCandidates(*candidates, inputNavi)
@@ -479,6 +488,12 @@ func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bo
 		return nil
 	}
 
+	if len([]rune(inputNavi)) >= minCharStopConjugatingDupes {
+		if _, ok := candidates2Map[inputNavi]; ok {
+			return nil
+		}
+	}
+
 	noBracket := removeBrackets(inputNavi)
 	*candidates = addToCandidates(*candidates, noBracket)
 
@@ -513,6 +528,26 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 
 	candidatesSlice = addToCandidates(candidatesSlice, word.Navi)
 
+	//Lenited forms, too
+	found := false
+	lenited := ""
+	lenitedInfix := ""
+	for _, a := range lenitors {
+		if strings.HasPrefix(word.Navi, a) {
+			lenited = strings.TrimPrefix(word.Navi, a)
+			lenited = lenitionMap[a] + lenited
+			found = true
+			if len(word.InfixLocations) > 3 {
+				if strings.HasPrefix(word.InfixLocations, a) {
+					lenitedInfix = strings.TrimPrefix(word.InfixLocations, a)
+					lenitedInfix = lenitionMap[a] + lenitedInfix
+					found = true
+				}
+			}
+			break
+		}
+	}
+
 	if word.PartOfSpeech == "pn." {
 		candidatesSlice = addToCandidates(candidatesSlice, "nì"+word.Navi)
 	}
@@ -520,19 +555,9 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
 		reconjugateNouns(&candidatesSlice, word, word.Navi, 0, 0, 0, affixLimit)
 		//Lenited forms, too
-		found := false
-
-		for _, a := range lenitors {
-			if strings.HasPrefix(word.Navi, a) {
-				word.Navi = strings.TrimPrefix(word.Navi, a)
-				word.Navi = lenitionMap[a] + word.Navi
-				found = true
-				break
-			}
-		}
 		if found {
-			candidatesSlice = addToCandidates(candidatesSlice, word.Navi)
-			reconjugateNouns(&candidatesSlice, word, word.Navi, 0, 0, -1, affixLimit-1)
+			candidatesSlice = addToCandidates(candidatesSlice, lenited)
+			reconjugateNouns(&candidatesSlice, word, lenited, 0, 0, -1, affixLimit-1)
 		}
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit)
@@ -544,18 +569,9 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 			candidatesSlice = addToCandidates(candidatesSlice, participle+"a")
 
 			//Lenited forms, too
-			found := false
-
-			for _, a := range lenitors {
-				if strings.HasPrefix(participle, a) {
-					participle = strings.TrimPrefix(participle, a)
-					participle = lenitionMap[a] + participle
-					found = true
-					break
-				}
-			}
 			if found {
-				candidatesSlice = addToCandidates(candidatesSlice, participle+"a")
+				lenParticiple := removeBrackets(strings.ReplaceAll(lenitedInfix, "<1>", a))
+				candidatesSlice = addToCandidates(candidatesSlice, lenParticiple+"a")
 			}
 		}
 
@@ -563,6 +579,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 		if allowPrefixes {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
+			lenitedGerund := "s" + strings.TrimPrefix(gerund, "t")
 
 			candidatesSlice = addToCandidates(candidatesSlice, gerund)
 
@@ -583,39 +600,17 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 			}
 
 			//Lenited forms, too
-			found := false
-
-			for _, a := range lenitors {
-				if strings.HasPrefix(gerund, a) {
-					gerund = strings.TrimPrefix(gerund, a)
-					gerund = lenitionMap[a] + gerund
-					found = true
-					break
-				}
-			}
-			if found {
-				candidatesSlice = addToCandidates(candidatesSlice, gerund)
-				reconjugateNouns(&candidatesSlice, word, gerund, 0, 0, -1, affixLimit-1)
-			}
+			candidatesSlice = addToCandidates(candidatesSlice, lenitedGerund)
+			reconjugateNouns(&candidatesSlice, word, lenitedGerund, 0, 0, -1, affixLimit-1)
 		}
 		// Ability to [verb]
 		reconjugateNouns(&candidatesSlice, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
 		reconjugateNouns(&candidatesSlice, word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
 
 		//Lenited forms, too
-		found := false
-
-		for _, a := range lenitors {
-			if strings.HasPrefix(word.Navi, a) {
-				word.Navi = strings.TrimPrefix(word.Navi, a)
-				word.Navi = lenitionMap[a] + word.Navi
-				found = true
-				break
-			}
-		}
 		if found {
-			reconjugateNouns(&candidatesSlice, word, word.Navi+"tswo", 0, 0, -1, affixLimit-2)
-			reconjugateNouns(&candidatesSlice, word, word.Navi+"yu", 0, 0, -1, affixLimit-2)
+			reconjugateNouns(&candidatesSlice, word, lenited+"tswo", 0, 0, -1, affixLimit-2)
+			reconjugateNouns(&candidatesSlice, word, lenited+"yu", 0, 0, -1, affixLimit-2)
 		}
 
 	} else if word.PartOfSpeech == "adj." {
@@ -627,15 +622,10 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 		}
 
 		//Lenited forms, too
-		for _, a := range lenitors {
-			if strings.HasPrefix(word.Navi, a) {
-				word.Navi = strings.TrimPrefix(word.Navi, a)
-				word.Navi = lenitionMap[a] + word.Navi
-				candidatesSlice = addToCandidates(candidatesSlice, word.Navi)
-				if !strings.HasSuffix(word.Navi, "a") {
-					candidatesSlice = addToCandidates(candidatesSlice, word.Navi+"a")
-				}
-				break
+		if found {
+			candidatesSlice = addToCandidates(candidatesSlice, lenited)
+			if !strings.HasSuffix(lenited, "a") {
+				candidatesSlice = addToCandidates(candidatesSlice, lenited+"a")
 			}
 		}
 	}
@@ -895,19 +885,6 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 
 				// Get conjugations
 				candidates2slice = append(candidates2slice, reconjugate(word, true, affixLimit)...)
-				//Lenited forms, too
-				found := false
-				for _, a := range lenitors {
-					if strings.HasPrefix(word.Navi, a) {
-						word.Navi = strings.TrimPrefix(word.Navi, a)
-						word.Navi = lenitionMap[a] + word.Navi
-						found = true
-						break
-					}
-				}
-				if found {
-					candidates2slice = append(candidates2slice, reconjugate(word, false, affixLimit)...)
-				}
 
 				sort.SliceStable(candidates2slice, func(i, j int) bool {
 					return candidates2slice[i].length < candidates2slice[j].length
@@ -917,19 +894,14 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				siTswo := strings.TrimSuffix(word.Navi, " si")
 				siTswo = siTswo + "tswo"
 				reconjugateNouns(&candidates2slice, word, siTswo, 0, 0, 0, affixLimit)
-				//Lenited forms, too
-				found := false
+
 				for _, a := range lenitors {
-					if strings.HasPrefix(siTswo, a) {
-						siTswo = strings.TrimPrefix(siTswo, a)
-						siTswo = lenitionMap[a] + siTswo
-						found = true
+					if strings.HasPrefix(word.Navi, a) {
+						lenitedTswo := strings.TrimPrefix(word.Navi, a)
+						lenitedTswo = lenitionMap[a] + lenitedTswo
+						reconjugateNouns(&candidates2slice, word, lenitedTswo, 0, 0, -1, affixLimit)
 						break
 					}
-				}
-				if found {
-					candidates2slice = addToCandidates(candidates2slice, siTswo)
-					reconjugateNouns(&candidates2slice, word, siTswo, 0, 0, -1, affixLimit)
 				}
 
 				sort.SliceStable(candidates2slice, func(i, j int) bool {
@@ -960,7 +932,8 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, charMinMapSet int, charLimitMapSet int, startNumber int) (err error) {
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, charMinMapSet int,
+	charLimitMapSet int, minCharStopConjugatingDupesSet int, startNumber int) (err error) {
 	homoMap.mu.Lock()
 	homoMap.homoMap = map[string]int{}
 	homoMap.mu.Unlock()
@@ -968,6 +941,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	charLimit = charLimitSet
 	charMinMap = charMinMapSet
 	charLimitMap = charLimitMapSet
+	minCharStopConjugatingDupes = minCharStopConjugatingDupesSet
 	start := time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
@@ -1098,7 +1072,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1110,8 +1084,8 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length,
 	// minimum word length for the duplicate table, maximum word length for the duplicate table,
-	// start at word number N
-	StageThree(dictCount, 0, 5, 14, 0, 127, 0)
+	// minimum word length to stop reconjugating, start at word number N
+	StageThree(dictCount, 0, 127, 127, 0, 24, 15, 0)
 
 	return nil
 }
