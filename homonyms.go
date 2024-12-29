@@ -375,22 +375,14 @@ func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, pre
 	case 3:
 		// This one will demand this makes it use lenition
 		lenited := inputNavi
-		if unlenite != 0 {
-			for _, a := range lenitors {
-				if strings.HasPrefix(lenited, a) {
-					lenited = strings.TrimPrefix(lenited, a)
-					lenited = lenitionMap[a] + lenited
-					break
-				}
+		if unlenite == -1 {
+			for _, element := range append(prefixes1lenition, "tsay") {
+				// If it has a lenition-causing prefix
+
+				// regardless of whether or not it's found
+				lenited2 := element + lenited
+				reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
 			}
-		}
-
-		for _, element := range append(prefixes1lenition, "tsay") {
-			// If it has a lenition-causing prefix
-
-			// regardless of whether or not it's found
-			lenited2 := element + lenited
-			reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
 		}
 		fallthrough
 	case 4:
