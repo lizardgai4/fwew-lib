@@ -17,7 +17,6 @@ import (
 
 var homonymsArray = []string{"", "", ""}
 var candidates2 Queue = *CreateQueue(30000)
-var candidates2slice []candidate
 var candidates2Map = map[string]bool{}
 var homoMap = HomoMapStruct{}
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
@@ -38,9 +37,6 @@ var longest uint8 = 0
 */
 var totalCandidates int = 0
 var charLimit int = 14
-var charMinMap int = 0
-var charLimitMap int = 14
-var minCharStopConjugatingDupes int = 14
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
 	"yu":     true, // [verb]er
@@ -317,13 +313,6 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 		return candidates
 	}
 
-	// Is it too long or short for the duplicate detection map?
-	if newLength > charLimitMap || newLength < charMinMap {
-		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
-		totalCandidates++
-		return candidates
-	}
-
 	// If it's in the range, is it good?
 	if _, ok := candidates2Map[candidate1]; !ok {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
@@ -345,12 +334,6 @@ func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, pre
 
 	if runeLen > charLimit {
 		return nil
-	}
-
-	if runeLen >= minCharStopConjugatingDupes {
-		if _, ok := candidates2Map[inputNavi]; ok {
-			return nil
-		}
 	}
 
 	*candidates = addToCandidates(*candidates, inputNavi)
@@ -486,12 +469,6 @@ func removeBrackets(input string) string {
 func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8) error {
 	if affixLimit == 0 {
 		return nil
-	}
-
-	if len([]rune(inputNavi)) >= minCharStopConjugatingDupes {
-		if _, ok := candidates2Map[inputNavi]; ok {
-			return nil
-		}
 	}
 
 	noBracket := removeBrackets(inputNavi)
@@ -865,6 +842,8 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 		//checkAsyncLock.Wait()
 
 		if wordCount >= startNumber {
+			// Reset dupe detector so it's not taking up all the RAM
+			candidates2Map = map[string]bool{}
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
 			// Progress counter
@@ -891,17 +870,22 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				})
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
-				siTswo := strings.TrimSuffix(word.Navi, " si")
-				siTswo = siTswo + "tswo"
-				reconjugateNouns(&candidates2slice, word, siTswo, 0, 0, 0, affixLimit)
-
+				siless := strings.TrimSuffix(word.Navi, " si")
+				lenited := ""
+				found := false
 				for _, a := range lenitors {
-					if strings.HasPrefix(word.Navi, a) {
-						lenitedTswo := strings.TrimPrefix(word.Navi, a)
-						lenitedTswo = lenitionMap[a] + lenitedTswo
-						reconjugateNouns(&candidates2slice, word, lenitedTswo, 10, 0, -1, affixLimit)
+					if strings.HasPrefix(siless, a) {
+						lenited = strings.TrimPrefix(siless, a)
+						lenited = lenitionMap[a] + lenited
+						found = true
 						break
 					}
+				}
+				reconjugateNouns(&candidates2slice, word, siless+"tswo", 0, 0, 0, affixLimit)
+				reconjugateNouns(&candidates2slice, word, siless+"siyu", 0, 0, 0, affixLimit)
+				if found {
+					reconjugateNouns(&candidates2slice, word, lenited+"tswo", 0, 0, 0, affixLimit)
+					reconjugateNouns(&candidates2slice, word, lenited+"siyu", 0, 0, 0, affixLimit)
 				}
 
 				sort.SliceStable(candidates2slice, func(i, j int) bool {
@@ -932,16 +916,12 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, charMinMapSet int,
-	charLimitMapSet int, minCharStopConjugatingDupesSet int, startNumber int) (err error) {
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
 	homoMap.mu.Lock()
 	homoMap.homoMap = map[string]int{}
 	homoMap.mu.Unlock()
 
 	charLimit = charLimitSet
-	charMinMap = charMinMapSet
-	charLimitMap = charLimitMapSet
-	minCharStopConjugatingDupes = minCharStopConjugatingDupesSet
 	start := time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
@@ -979,7 +959,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	log.Printf(finalString)
 	resultsFile.WriteString(finalString + "\n")
 
-	checkedString := "Checked " + strconv.Itoa(len(candidates2Map)) + " total conjugations"
+	checkedString := "Checked " + strconv.Itoa(totalCandidates) + " total conjugations"
 	fmt.Println(checkedString)
 	resultsFile.WriteString(checkedString + "\n")
 
@@ -1072,7 +1052,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1082,10 +1062,8 @@ func homonymSearch() error {
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
-	// number of dictionaries, minimum affixes, maximum affixes, maximum word length,
-	// minimum word length for the duplicate table, maximum word length for the duplicate table,
-	// minimum word length to stop reconjugating, start at word number N
-	StageThree(dictCount, 0, 127, 127, 0, 24, 15, 0)
+	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
+	StageThree(dictCount, 0, 127, 127, 0)
 
 	return nil
 }
