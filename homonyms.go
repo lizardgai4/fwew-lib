@@ -843,7 +843,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 
 		if wordCount >= startNumber {
 			// Reset dupe detector so it's not taking up all the RAM
-			candidates2Map = map[string]bool{}
+			clear(candidates2Map)
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
 			// Progress counter
