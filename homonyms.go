@@ -638,15 +638,20 @@ func findUniques(affixes [][]string, reverse bool) string {
 		}
 	}
 
+	all := map[string]bool{}
 	checked := map[string]bool{}
 
 	if len(affixes) > 1 {
+		for _, a := range affixes {
+			for _, aPrime := range a {
+				all[aPrime] = true
+			}
+		}
 		// compare all of one array
 		for i, a := range affixes {
 			// to the arrays after
 			for _, b := range affixes[i+1:] {
 				for _, aPrime := range a {
-					found := false
 					if _, ok := checked[aPrime]; ok {
 						continue
 					}
@@ -662,18 +667,13 @@ func findUniques(affixes [][]string, reverse bool) string {
 
 					for _, bPrime := range b {
 						if aPrime == bPrime {
-							found = true
+							all[aPrime] = false
 							break
 						}
-					}
-
-					if !found {
-						uniques.WriteString(aPrime)
 					}
 				}
 
 				for _, bPrime := range b {
-					found := false
 					if _, ok := checked[bPrime]; ok {
 						continue
 					}
@@ -681,17 +681,20 @@ func findUniques(affixes [][]string, reverse bool) string {
 					checked[bPrime] = true
 					for _, aPrime := range a {
 						if aPrime == bPrime {
-							found = true
+							all[aPrime] = false
 							break
 						}
-					}
-
-					if !found {
-						uniques.WriteString(bPrime)
 					}
 				}
 			}
 		}
+
+		for key, val := range all {
+			if val {
+				uniques.WriteString(key)
+			}
+		}
+
 	}
 
 	return uniques.String()
