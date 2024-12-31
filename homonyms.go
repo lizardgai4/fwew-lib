@@ -338,9 +338,10 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 
 	// If it's in the range, is it good?
 	if _, ok := candidates2Map[lenited]; !ok {
-		candidates = append(candidates, candidate{navi: lenited, length: uint8(len([]rune(lenited)))})
+		// lenited ones will be sorted to appear later
+		candidates = append(candidates, candidate{navi: lenited, length: uint8(newLength + 2)})
 		totalCandidates++
-		candidates2Map[candidate1] = true
+		candidates2Map[lenited] = true
 	}
 
 	return candidates
@@ -1020,7 +1021,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(8)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
