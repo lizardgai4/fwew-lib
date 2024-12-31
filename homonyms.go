@@ -319,7 +319,7 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 		totalCandidates++
 		candidates2Map[candidate1] = true
 	}
-	
+
 	//Lenited forms, too
 	found := false
 	lenited := ""
@@ -331,14 +331,14 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 			break
 		}
 	}
-	
+
 	if !found {
 		return candidates
 	}
-	
+
 	// If it's in the range, is it good?
 	if _, ok := candidates2Map[lenited]; !ok {
-		candidates = append(candidates, candidate{navi: lenited], length: uint8(len([]rune(lenited))})
+		candidates = append(candidates, candidate{navi: lenited, length: uint8(len([]rune(lenited)))})
 		totalCandidates++
 		candidates2Map[candidate1] = true
 	}
@@ -852,7 +852,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
 				siless := strings.TrimSuffix(word.Navi, " si")
-				
+
 				reconjugateNouns(&candidates2slice, word, siless+"tswo", 0, 0, 0, affixLimit)
 				reconjugateNouns(&candidates2slice, word, siless+"siyu", 0, 0, 0, affixLimit)
 
