@@ -997,7 +997,22 @@ func homonymSearch() error {
 			fmt.Println("error opening file:", err)
 			return err
 		}
+		ourDict := FwewDictInit(uint8(0))
 		for _, word := range allWords {
+			// Make sure it knows the signatures of the older words so it doesn't duplicate them
+			results, err := TranslateFromNaviHash(ourDict, word, true)
+
+			if err == nil && len(results) > 0 && len(results[0]) > 2 {
+
+				results[0] = results[0][1:]
+
+				homoMapQuery := QueryHelper(results[0])
+
+				// No duplicates
+				if _, ok := homoMap.homoMap[homoMapQuery]; !ok {
+					homoMap.homoMap[homoMapQuery] = 1
+				}
+			}
 			a.WriteString(word + "\n")
 		}
 
