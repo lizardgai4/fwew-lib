@@ -611,8 +611,12 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 func findUniques(affixes [][]string, reverse bool) string {
 	var uniques strings.Builder
 
+	for i := range affixes {
+		sort.Slice(affixes[i], func(x, y int) bool { return affixes[i][x] < affixes[i][y] })
+	}
+
 	if reverse {
-		for i, _ := range affixes {
+		for i := range affixes {
 			slices.Reverse(affixes[i])
 		}
 	}
@@ -886,10 +890,6 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 }
 
 func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
-	homoMap.mu.Lock()
-	homoMap.homoMap = map[string]int{}
-	homoMap.mu.Unlock()
-
 	charLimit = charLimitSet
 	start := time.Now()
 
@@ -966,6 +966,9 @@ func homonymSearch() error {
 	}
 
 	defer resultsFile.Close()
+
+	// We'll need this for the previous file
+	homoMap.homoMap = map[string]int{}
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
@@ -1047,7 +1050,7 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(dictCount, 0, 127, 127, 0)
+	StageThree(dictCount, 0, 5, 16, 0)
 
 	return nil
 }
