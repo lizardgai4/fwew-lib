@@ -611,10 +611,6 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 func findUniques(affixes [][]string, reverse bool) string {
 	var uniques strings.Builder
 
-	for i := range affixes {
-		sort.Slice(affixes[i], func(x, y int) bool { return affixes[i][x] < affixes[i][y] })
-	}
-
 	if reverse {
 		for i := range affixes {
 			slices.Reverse(affixes[i])
@@ -623,6 +619,8 @@ func findUniques(affixes [][]string, reverse bool) string {
 
 	all := map[string]bool{}
 	checked := map[string]bool{}
+
+	uniqueSlice := []string{}
 
 	if len(affixes) > 1 {
 		for _, a := range affixes {
@@ -644,7 +642,7 @@ func findUniques(affixes [][]string, reverse bool) string {
 					// Find kusara, kawnara, tsukkara and kestukkara
 					// also kìm, kìmyu and kìmtswo
 					if _, ok := changePOS[aPrime]; ok {
-						uniques.WriteString(aPrime)
+						uniqueSlice = append(uniqueSlice, aPrime)
 						continue
 					}
 
@@ -674,10 +672,15 @@ func findUniques(affixes [][]string, reverse bool) string {
 
 		for key, val := range all {
 			if val {
-				uniques.WriteString(key)
+				uniqueSlice = append(uniqueSlice, key)
 			}
 		}
 
+		sort.Slice(uniqueSlice, func(i, j int) bool { return uniqueSlice[i] < uniqueSlice[j] })
+
+		for _, a := range uniqueSlice {
+			uniques.WriteString(a)
+		}
 	}
 
 	return uniques.String()
