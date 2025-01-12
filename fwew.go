@@ -689,37 +689,39 @@ func dialectCrunch(query []string, guaranteedForest bool) []string {
 		}
 
 		//For nasal assimilation stuff
-		/*for i, n := range []string{"m", "ng", "n"} {
-			numberI := strconv.Itoa(i)
-			for j, s := range []string{"ts", "s", "f"} {
-				numberJ := strconv.Itoa(j)
-				a = strings.ReplaceAll(a, s+n, numberI+numberJ)
+		if nasalAssimilationOnly {
+			for i, n := range []string{"m", "ng", "n"} {
+				numberI := strconv.Itoa(i)
+				for j, s := range []string{"ts", "s", "f"} {
+					numberJ := strconv.Itoa(j)
+					a = strings.ReplaceAll(a, s+n, numberI+numberJ)
+				}
+				// Not if it starts or ends with n
+				if strings.HasPrefix(a, n) {
+					a = strings.TrimPrefix(a, n)
+					a = numberI + a
+				}
+				if strings.HasSuffix(a, n) {
+					a = strings.TrimSuffix(a, n)
+					a = a + numberI
+				}
+				//Replace the nasals
+				a = strings.ReplaceAll(a, n, "n")
+				// Undo the protections
+				if strings.HasPrefix(a, numberI) {
+					a = strings.TrimPrefix(a, numberI)
+					a = n + a
+				}
+				if strings.HasSuffix(a, numberI) {
+					a = strings.TrimSuffix(a, numberI)
+					a = a + n
+				}
+				for j, s := range []string{"ts", "s", "f"} {
+					numberJ := strconv.Itoa(j)
+					a = strings.ReplaceAll(a, numberI+numberJ, s+n)
+				}
 			}
-			// Not if it starts or ends with n
-			if strings.HasPrefix(a, n) {
-				a = strings.TrimPrefix(a, n)
-				a = numberI + a
-			}
-			if strings.HasSuffix(a, n) {
-				a = strings.TrimSuffix(a, n)
-				a = a + numberI
-			}
-			//Replace the nasals
-			a = strings.ReplaceAll(a, n, "n")
-			// Undo the protections
-			if strings.HasPrefix(a, numberI) {
-				a = strings.TrimPrefix(a, numberI)
-				a = n + a
-			}
-			if strings.HasSuffix(a, numberI) {
-				a = strings.TrimSuffix(a, numberI)
-				a = a + n
-			}
-			for j, s := range []string{"ts", "s", "f"} {
-				numberJ := strconv.Itoa(j)
-				a = strings.ReplaceAll(a, numberI+numberJ, s+n)
-			}
-		}*/
+		}
 
 		nucleusCount := 0
 		// remove reef tìftangs

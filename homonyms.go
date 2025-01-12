@@ -31,6 +31,9 @@ var lenitionMap = map[string]string{
 	"'":  "",
 }
 
+var inefficiencyWarning = false
+var nasalAssimilationOnly = false
+
 /*
 var top10Longest = map[uint8]string{}
 var longest uint8 = 0
@@ -709,7 +712,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			continue
 		}
 
-		if wait {
+		if inefficiencyWarning && wait {
 			wait = false
 			waitedString := "Dictionary " + strconv.Itoa(int(dict.dictNum)) + " waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
 			if !firstWait {
@@ -721,32 +724,34 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			resultsFile.WriteString(waitedString + "\n")
 		}
 
-		/*if strings.HasSuffix(a.navi, "tsyìpna") {
+		if strings.HasSuffix(a, "tsyìpna") {
 			continue
 		}
 
-		tempA := strings.ReplaceAll(a.navi, "nts", "")
+		tempA := strings.ReplaceAll(a, "nts", "")
 		tempA = strings.ReplaceAll(tempA, "mts", "")
 		tempA = strings.ReplaceAll(tempA, "ngts", "")
 
 		//Nasal assimilation stuff
-		containsNasal := false
+		if nasalAssimilationOnly {
+			containsNasal := false
 
-		for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
-			for _, n := range []string{"n", "ng", "m"} {
-				if strings.Contains(tempA, n+t) || strings.Contains(tempA, t+n) {
-					containsNasal = true
+			for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
+				for _, n := range []string{"n", "ng", "m"} {
+					if strings.Contains(tempA, n+t) || strings.Contains(tempA, t+n) {
+						containsNasal = true
+						break
+					}
+				}
+				if containsNasal {
 					break
 				}
 			}
-			if containsNasal {
-				break
+
+			if !containsNasal {
+				continue
 			}
 		}
-
-		if !containsNasal {
-			continue
-		}*/
 
 		// These can clog up the search results
 		if strings.HasSuffix(a, "rofa") || strings.HasSuffix(a, "rofasì") {
@@ -892,7 +897,9 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int) (err error) {
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int, inefficiencyWarningSet bool, nasalAssimilationOnlySet bool) (err error) {
+	inefficiencyWarning = inefficiencyWarningSet
+	nasalAssimilationOnly = nasalAssimilationOnlySet
 	charLimit = charLimitSet
 	start := time.Now()
 
@@ -1053,7 +1060,8 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
-	StageThree(dictCount, 0, 5, 16, 0)
+	// warn about inefficiencies, nasal assimilation mode
+	StageThree(dictCount, 0, 127, 127, 0, false, true)
 
 	return nil
 }
