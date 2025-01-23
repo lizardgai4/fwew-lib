@@ -83,6 +83,7 @@ type HomoMapStruct struct {
 var writeLock sync.Mutex
 var makeWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup
+var start time.Time
 
 // FifoQueue
 type FifoQueue interface {
@@ -703,6 +704,22 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		a, _ := candidates2.Remove()
 
+		wordNumber, err1 := strconv.Atoi(a)
+
+		if err1 == nil && wordNumber%100 == 0 {
+			total_seconds := time.Since(start)
+
+			printMessage := "Word " + strconv.Itoa(wordNumber) + " is in dict " +
+				strconv.Itoa(int(dict.dictNum)) + ".  Time elapsed is " +
+				strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+				strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
+				strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(totalCandidates) + " conjugations checked"
+
+			log.Printf(printMessage)
+			resultsFile.WriteString(printMessage + "\n")
+			continue
+		}
+
 		if a == "" {
 			if !wait {
 				start2 = time.Now()
@@ -840,18 +857,8 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			clear(candidates2Map)
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
-			// Progress counter
-			if wordCount%100 == 0 {
-				total_seconds := time.Since(start)
-
-				printMessage := "On word " + strconv.Itoa(wordCount) + ".  Time elapsed is " +
-					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
-					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(totalCandidates) + " conjugations checked"
-
-				log.Printf(printMessage)
-				resultsFile.WriteString(printMessage + "\n")
-			}
+			// Let the dictionary threads know that we are on number worcCount
+			candidates2slice = append(candidates2slice, candidate{navi: strconv.Itoa(wordCount), length: 0})
 
 			// No multiword words
 			if !strings.Contains(word.Navi, " ") {
@@ -901,7 +908,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	inefficiencyWarning = inefficiencyWarningSet
 	nasalAssimilationOnly = nasalAssimilationOnlySet
 	charLimit = charLimitSet
-	start := time.Now()
+	start = time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
 
@@ -1049,7 +1056,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(8)
+	dictCount := uint8(2)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1061,7 +1068,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, nasal assimilation mode
-	StageThree(dictCount, 0, 4, 14, 0, true, false)
+	StageThree(dictCount, 0, 3, 14, 0, true, false)
 
 	return nil
 }
