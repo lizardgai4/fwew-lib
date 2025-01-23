@@ -40,6 +40,7 @@ var longest uint8 = 0
 */
 var totalCandidates int = 0
 var charLimit int = 14
+var progressInterval int = 100
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
 	"yu":     true, // [verb]er
@@ -735,7 +736,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		wordNumber, err1 := strconv.Atoi(a)
 
 		if err1 == nil {
-			if wordNumber%100 == 0 {
+			if wordNumber%progressInterval == 0 {
 				total_seconds := time.Since(start)
 
 				printMessage := "Word " + strconv.Itoa(wordNumber) + " is in dict " +
@@ -891,7 +892,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
 			// Let the dictionary threads know that we are on number worcCount
-			if wordCount%100 == 0 {
+			if wordCount%progressInterval == 0 {
 				candidates2slice = append(candidates2slice, candidate{navi: strconv.Itoa(wordCount), length: 0})
 			}
 
@@ -941,10 +942,14 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int, inefficiencyWarningSet bool, nasalAssimilationOnlySet bool) (err error) {
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int,
+	inefficiencyWarningSet bool, nasalAssimilationOnlySet bool, progressIntervalSet int) (err error) {
+
 	inefficiencyWarning = inefficiencyWarningSet
 	nasalAssimilationOnly = nasalAssimilationOnlySet
 	charLimit = charLimitSet
+	progressInterval = progressIntervalSet
+
 	start = time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
@@ -1100,8 +1105,8 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
-	// warn about inefficiencies, nasal assimilation mode
-	StageThree(dictCount, 0, 4, 14, 0, true, false)
+	// warn about inefficiencies, nasal assimilation mode, Progress updates after checking every N number of words
+	StageThree(dictCount, 0, 4, 14, 0, true, false, 10)
 
 	return nil
 }
