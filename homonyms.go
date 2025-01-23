@@ -321,6 +321,7 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	// If it's in the range, is it good?
 	if _, ok := candidates2Map[candidate1]; !ok {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
+		//totalCandidates++
 		candidates2Map[candidate1] = true
 	}
 
@@ -344,6 +345,7 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	if _, ok := candidates2Map[lenited]; !ok {
 		// lenited ones will be sorted to appear later
 		candidates = append(candidates, candidate{navi: lenited, length: uint8(newLength + 2)})
+		//totalCandidates++
 		candidates2Map[lenited] = true
 	}
 
@@ -763,20 +765,18 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			resultsFile.WriteString(waitedString + "\n")
 		}
 
-		if len(a) >= 1 {
-			totalCandidates++
-		}
-
-		if strings.HasSuffix(a, "tsyìpna") {
-			continue
-		}
-
-		tempA := strings.ReplaceAll(a, "nts", "")
-		tempA = strings.ReplaceAll(tempA, "mts", "")
-		tempA = strings.ReplaceAll(tempA, "ngts", "")
+		totalCandidates++
 
 		//Nasal assimilation stuff
 		if nasalAssimilationOnly {
+			if strings.HasSuffix(a, "tsyìpna") {
+				continue
+			}
+
+			tempA := strings.ReplaceAll(a, "nts", "")
+			tempA = strings.ReplaceAll(tempA, "mts", "")
+			tempA = strings.ReplaceAll(tempA, "ngts", "")
+
 			containsNasal := false
 
 			for _, t := range []string{"t", "k", "p", "tx", "kx", "px"} {
@@ -909,13 +909,16 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			}
 
 			for _, a := range candidates2slice {
-				err3 := candidates2.Insert(a.navi)
-				if err3 != nil {
+				err3 := errors.New("Example")
+				for err3 != nil {
 					//start2 := time.Now()
-					for len(candidates2.q) > 15000 {
-						time.Sleep(time.Millisecond * 5)
+					err3 = candidates2.Insert(a.navi)
+
+					if err3 != nil {
+						for len(candidates2.q) > 15000 {
+							time.Sleep(time.Millisecond * 5)
+						}
 					}
-					candidates2.Insert(a.navi)
 					//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
 				}
 			}
@@ -1079,7 +1082,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(8)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1091,7 +1094,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, nasal assimilation mode
-	StageThree(dictCount, 0, 2, 14, 0, true, false)
+	StageThree(dictCount, 0, 4, 14, 0, true, false)
 
 	return nil
 }
