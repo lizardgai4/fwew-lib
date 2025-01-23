@@ -115,6 +115,12 @@ func (q *Queue) Remove() (string, error) {
 	return "", errors.New("Queue is empty")
 }
 
+func (q *Queue) Length() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.q)
+}
+
 // CreateQueue creates an empty queue with desired capacity
 func CreateQueue(capacity int) *Queue {
 	return &Queue{
@@ -700,7 +706,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 	for !makingFinished {
 
 		// Don't pull from empty
-		for len(candidates2.q) == 0 {
+		for candidates2.Length() == 0 {
 			time.Sleep(time.Millisecond * 5)
 
 			// Make sure it's not finished first
@@ -885,7 +891,9 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
 			// Let the dictionary threads know that we are on number worcCount
-			candidates2slice = append(candidates2slice, candidate{navi: strconv.Itoa(wordCount), length: 0})
+			if wordCount%100 == 0 {
+				candidates2slice = append(candidates2slice, candidate{navi: strconv.Itoa(wordCount), length: 0})
+			}
 
 			// No multiword words
 			if !strings.Contains(word.Navi, " ") {
@@ -909,18 +917,17 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			}
 
 			for _, a := range candidates2slice {
-				err3 := errors.New("Example")
-				for err3 != nil {
-					//start2 := time.Now()
-					err3 = candidates2.Insert(a.navi)
+				//start2 := time.Now()
+				err3 := candidates2.Insert(a.navi)
 
-					if err3 != nil {
-						for len(candidates2.q) > 15000 {
-							time.Sleep(time.Millisecond * 5)
-						}
+				if err3 != nil {
+					for candidates2.Length() > 15000 {
+						time.Sleep(time.Millisecond * 5)
 					}
-					//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+					candidates2.Insert(a.navi)
 				}
+
+				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
 			}
 		}
 
@@ -1094,7 +1101,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, nasal assimilation mode
-	StageThree(dictCount, 0, 4, 14, 0, true, false)
+	StageThree(dictCount, 0, 2, 14, 0, true, false)
 
 	return nil
 }
