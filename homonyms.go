@@ -321,7 +321,6 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	// If it's in the range, is it good?
 	if _, ok := candidates2Map[candidate1]; !ok {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
-		totalCandidates++
 		candidates2Map[candidate1] = true
 	}
 
@@ -345,7 +344,6 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	if _, ok := candidates2Map[lenited]; !ok {
 		// lenited ones will be sorted to appear later
 		candidates = append(candidates, candidate{navi: lenited, length: uint8(newLength + 2)})
-		totalCandidates++
 		candidates2Map[lenited] = true
 	}
 
@@ -692,39 +690,55 @@ func findUniques(affixes [][]string, reverse bool) string {
 }
 
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
+	defer checkWaitGroup.Done()
 	wait := false
 	firstWait := true
 	start2 := time.Now()
 	makingFinished := false
 	for !makingFinished {
+
 		// Don't pull from empty
 		for len(candidates2.q) == 0 {
 			time.Sleep(time.Millisecond * 5)
+
+			// Make sure it's not finished first
+			finished.mu.Lock()
+			makingFinished = finished.finished
+			finished.mu.Unlock()
+
+			if makingFinished {
+				break
+			}
+		}
+
+		if makingFinished {
+			break
 		}
 
 		a, _ := candidates2.Remove()
 
 		if a == finishedSentinelValue {
-			defer checkWaitGroup.Done()
 			finished.mu.Lock()
-			makingFinished = finished.finished
+			finished.finished = true
 			finished.mu.Unlock()
 			break
 		}
 
 		wordNumber, err1 := strconv.Atoi(a)
 
-		if err1 == nil && wordNumber%100 == 0 {
-			total_seconds := time.Since(start)
+		if err1 == nil {
+			if wordNumber%100 == 0 {
+				total_seconds := time.Since(start)
 
-			printMessage := "Word " + strconv.Itoa(wordNumber) + " is in dict " +
-				strconv.Itoa(int(dict.dictNum)) + ".  Time elapsed is " +
-				strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
-				strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-				strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(totalCandidates) + " conjugations checked"
+				printMessage := "Word " + strconv.Itoa(wordNumber) + " is in dict " +
+					strconv.Itoa(int(dict.dictNum)) + ".  Time elapsed is " +
+					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
+					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(totalCandidates) + " conjugations checked"
 
-			log.Printf(printMessage)
-			resultsFile.WriteString(printMessage + "\n")
+				log.Printf(printMessage)
+				resultsFile.WriteString(printMessage + "\n")
+			}
 			continue
 		}
 
@@ -747,6 +761,10 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			}
 			fmt.Println(waitedString)
 			resultsFile.WriteString(waitedString + "\n")
+		}
+
+		if len(a) >= 1 {
+			totalCandidates++
 		}
 
 		if strings.HasSuffix(a, "tsyìpna") {
@@ -831,8 +849,12 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		} else {
 			top10Longest[runeCount] = a.navi
 		}*/
-
 	}
+
+	printMessage := "Dictionary " + strconv.Itoa(int(dict.dictNum)) + " finished"
+
+	log.Printf(printMessage)
+	resultsFile.WriteString(printMessage + "\n")
 }
 
 func foundResult(conjugation string, homonymfo string) error {
@@ -903,6 +925,8 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	})
 
 	candidates2.Insert(finishedSentinelValue)
+	fmt.Println("Finished making word candidates")
+	resultsFile.WriteString("Finished making word candidates")
 
 	return err
 }
@@ -920,14 +944,18 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	}
 
 	makeWaitGroup.Add(1)
-	checkWaitGroup.Add(1)
 	go makeHomsAsync(affixLimit, startNumber, start)
 	for _, dict := range dictArray {
+		checkWaitGroup.Add(1)
 		go CheckHomsAsync(dict, minAffix)
 	}
 
 	makeWaitGroup.Wait()
+
 	checkWaitGroup.Wait()
+
+	fmt.Println("All dictionaries finished")
+	resultsFile.WriteString("All dictionaries finished")
 
 	//fmt.Println(homoMap)
 	//fmt.Println(tempHoms)
@@ -1063,7 +1091,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, nasal assimilation mode
-	StageThree(dictCount, 0, 4, 14, 0, true, false)
+	StageThree(dictCount, 0, 2, 14, 0, true, false)
 
 	return nil
 }
