@@ -56,7 +56,8 @@ var previousWords = map[string]bool{}
 //var dupeLengthsMap = map[int]int{}
 
 var finished = queueFinished{false, sync.Mutex{}}
-
+var finishedSentinelValue = "lu hasey srak?"
+var wordCount = 0
 var dictArray = []*FwewDict{}
 
 type queueFinished struct {
@@ -691,7 +692,6 @@ func findUniques(affixes [][]string, reverse bool) string {
 }
 
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
-	defer checkWaitGroup.Done()
 	wait := false
 	firstWait := true
 	start2 := time.Now()
@@ -703,6 +703,14 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		}
 
 		a, _ := candidates2.Remove()
+
+		if a == finishedSentinelValue {
+			defer checkWaitGroup.Done()
+			finished.mu.Lock()
+			makingFinished = finished.finished
+			finished.mu.Unlock()
+			break
+		}
 
 		wordNumber, err1 := strconv.Atoi(a)
 
@@ -824,9 +832,6 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			top10Longest[runeCount] = a.navi
 		}*/
 
-		finished.mu.Lock()
-		makingFinished = finished.finished
-		finished.mu.Unlock()
 	}
 }
 
@@ -846,7 +851,7 @@ func foundResult(conjugation string, homonymfo string) error {
 
 func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	defer makeWaitGroup.Done()
-	wordCount := 0
+	wordCount = 0
 
 	err := RunOnDict(func(word Word) error {
 		wordCount += 1
@@ -897,9 +902,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 		return nil
 	})
 
-	finished.mu.Lock()
-	finished.finished = true
-	finished.mu.Unlock()
+	candidates2.Insert(finishedSentinelValue)
 
 	return err
 }
@@ -917,22 +920,14 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	}
 
 	makeWaitGroup.Add(1)
+	checkWaitGroup.Add(1)
 	go makeHomsAsync(affixLimit, startNumber, start)
 	for _, dict := range dictArray {
-		checkWaitGroup.Add(1)
 		go CheckHomsAsync(dict, minAffix)
 	}
 
 	makeWaitGroup.Wait()
 	checkWaitGroup.Wait()
-
-	finishedBool := false
-	for !finishedBool {
-		time.Sleep(time.Second)
-		finished.mu.Lock()
-		finishedBool = finished.finished
-		finished.mu.Unlock()
-	}
 
 	//fmt.Println(homoMap)
 	//fmt.Println(tempHoms)
@@ -1068,7 +1063,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, nasal assimilation mode
-	StageThree(dictCount, 0, 3, 14, 0, true, false)
+	StageThree(dictCount, 0, 2, 14, 0, true, false)
 
 	return nil
 }
