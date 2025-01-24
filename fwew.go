@@ -1028,7 +1028,6 @@ func ReefMe(ipa string, inter bool) []string {
 }
 
 func StartEverything() string {
-	nasalAssimilationOnly = true
 	universalLock.Lock()
 	start := time.Now()
 	var errors = []error{
