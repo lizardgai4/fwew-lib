@@ -20,6 +20,7 @@ var candidates2 Queue = *CreateQueue(30000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
+var resultCount = 0
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
 var lenitionMap = map[string]string{
 	"ts": "s",
@@ -193,7 +194,6 @@ func StageOne() error {
 			if entry, ok := dictHash[standardizedWord]; ok {
 				if len(entry) > 1 {
 					query := QueryHelper(entry)
-					first2StageMap.Insert(standardizedWord)
 					foundResult(standardizedWord, query)
 				}
 			}
@@ -607,8 +607,6 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 			lenitedGerund := "s" + strings.TrimPrefix(gerund, "t")
 
-			candidatesSlice, _ = addToCandidates(candidatesSlice, gerund)
-
 			reconjugateNouns(&candidatesSlice, word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
@@ -907,6 +905,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 func foundResult(conjugation string, homonymfo string) error {
 	writeLock.Lock()
 	defer writeLock.Unlock()
+	resultCount++
 	fmt.Println(homonymfo)
 	_, err := resultsFile.WriteString(homonymfo + "\n")
 	if err != nil {
@@ -1029,7 +1028,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	log.Printf(finalString)
 	resultsFile.WriteString(finalString + "\n")
 
-	checkedString := "Checked " + strconv.Itoa(totalCandidates) + " total conjugations"
+	checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
 	fmt.Println(checkedString)
 	resultsFile.WriteString(checkedString + "\n")
 
@@ -1105,6 +1104,7 @@ func homonymSearch() error {
 		}
 		ourDict := FwewDictInit(uint8(0))
 		for _, word := range allWords {
+			resultCount++
 			// Make sure it knows the signatures of the older words so it doesn't duplicate them
 			results, err := TranslateFromNaviHash(ourDict, word, true)
 
@@ -1142,7 +1142,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(24)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
