@@ -17,7 +17,8 @@ import (
 
 var homonymsArray = []string{"", "", ""}
 var candidates2 Queue = *CreateQueue(30000)
-var candidates2Map = map[string]bool{}
+var first2StageMap = HomoMapStruct{}
+var stage3Map = map[string]bool{}
 var homoMap = HomoMapStruct{}
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
 var lenitionMap = map[string]string{
@@ -32,7 +33,7 @@ var lenitionMap = map[string]string{
 }
 
 var inefficiencyWarning = false
-var nasalAssimilationOnly = true
+var nasalAssimilationOnly = false
 
 /*
 var top10Longest = map[uint8]string{}
@@ -52,7 +53,6 @@ var changePOS = map[string]bool{
 
 var resultsFile *os.File
 var previous *os.File
-var previousWords = map[string]bool{}
 
 //var dupeLengthsMap = map[int]int{}
 
@@ -79,9 +79,10 @@ type Queue struct {
 
 type HomoMapStruct struct {
 	mu      sync.Mutex
-	homoMap map[string]int
+	homoMap map[string]bool
 }
 
+var mapMutex sync.Mutex
 var writeLock sync.Mutex
 var makeWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup
@@ -91,6 +92,19 @@ var start time.Time
 type FifoQueue interface {
 	Insert()
 	Remove()
+}
+
+func (h *HomoMapStruct) Insert(item string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.homoMap[item] = true
+}
+
+func (h *HomoMapStruct) Present(item string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	_, ok := h.homoMap[item]
+	return ok
 }
 
 // Insert inserts the item into the queue
@@ -144,6 +158,14 @@ func DuplicateDetector(query string) bool {
 	return result
 }
 
+func inAnyMap(query string) bool {
+	//prev := previousWords.Present(query)
+	first2 := first2StageMap.Present(query)
+	_, third := stage3Map[query]
+
+	return first2 || third
+}
+
 // Check for ones that are the exact same, no affixes needed
 func StageOne() error {
 	resultsFile.WriteString("Stage 1:\n")
@@ -168,11 +190,12 @@ func StageOne() error {
 			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
 		}
 
-		if _, ok := previousWords[standardizedWord]; !ok {
+		if !inAnyMap(standardizedWord) {
 			// If the word appears more than once, record it
 			if entry, ok := dictHash[standardizedWord]; ok {
 				if len(entry) > 1 {
 					query := QueryHelper(entry)
+					first2StageMap.Insert(standardizedWord)
 					foundResult(standardizedWord, query)
 				}
 			}
@@ -277,17 +300,16 @@ func QueryHelper(results []Word) string {
 	return allNaviWords.String()
 }
 
-// Helper to turn a string into a list of known words
-
 // Check for ones that are the exact same, no affixes needed
 func StageTwo() error {
 	resultsFile.WriteString("Stage 2:\n")
 
 	err := runOnFile(func(word Word) error {
-		if _, ok := previousWords[strings.ToLower(word.Navi)]; !ok {
+		lower := strings.ToLower(word.Navi)
+		if !inAnyMap(lower) {
 			standardizedWord := word.Navi
 
-			candidates2Map[word.Navi] = true
+			first2StageMap.Insert(word.Navi)
 
 			if len(strings.Split(word.Navi, " ")) == 1 {
 				allNaviWords := ""
@@ -326,10 +348,10 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	}
 
 	// If it's in the range, is it good?
-	if _, ok := candidates2Map[candidate1]; !ok {
+	if !inAnyMap(candidate1) {
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
 		//totalCandidates++
-		candidates2Map[candidate1] = true
+		stage3Map[candidate1] = true
 	}
 
 	//Lenited forms, too
@@ -349,11 +371,11 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	}
 
 	// If it's in the range, is it good?
-	if _, ok := candidates2Map[lenited]; !ok {
+	if !inAnyMap(lenited) {
 		// lenited ones will be sorted to appear later
 		candidates = append(candidates, candidate{navi: lenited, length: uint8(newLength + 2)})
 		//totalCandidates++
-		candidates2Map[lenited] = true
+		stage3Map[lenited] = true
 	}
 
 	return candidates
@@ -818,13 +840,11 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 			// No duplicates
 
-			homoMap.mu.Lock()
-			if _, ok := homoMap.homoMap[homoMapQuery]; !ok {
-				homoMap.homoMap[homoMapQuery] = 1
+			if !homoMap.Present(homoMapQuery) {
+				homoMap.Insert(homoMapQuery)
 
 				// No duplicates from previous
-				if _, ok := previousWords[strings.ToLower(a)]; ok {
-					homoMap.mu.Unlock()
+				if inAnyMap(strings.ToLower(a)) {
 					continue
 				}
 
@@ -833,11 +853,9 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 				err := foundResult(a, stringy)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
-					homoMap.mu.Unlock()
 					return
 				}
 			}
-			homoMap.mu.Unlock()
 		}
 		/*if len(strings.Split(a, " ")) > 1 {
 			fmt.Println("oops " + a)
@@ -874,7 +892,9 @@ func foundResult(conjugation string, homonymfo string) error {
 	}
 	lowercase := strings.ToLower(conjugation)
 	_, err2 := previous.WriteString(lowercase + "\n")
-	previousWords[strings.ToLower(lowercase)] = true
+
+	first2StageMap.Insert(strings.ToLower(lowercase))
+
 	return err2
 }
 
@@ -882,22 +902,13 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 	defer makeWaitGroup.Done()
 	wordCount = 0
 
-	firstTwoStageMap := map[string]bool{}
-
-	for key, val := range candidates2Map {
-		firstTwoStageMap[key] = val
-	}
-
 	err := RunOnDict(func(word Word) error {
 		wordCount += 1
 		//checkAsyncLock.Wait()
 
 		if wordCount >= startNumber {
 			// Reset dupe detector so it's not taking up all the RAM
-			clear(candidates2Map)
-			for key, val := range firstTwoStageMap {
-				candidates2Map[key] = val
-			}
+			clear(stage3Map)
 
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
@@ -1032,7 +1043,8 @@ func homonymSearch() error {
 	defer resultsFile.Close()
 
 	// We'll need this for the previous file
-	homoMap.homoMap = map[string]int{}
+	homoMap.homoMap = map[string]bool{}
+	first2StageMap.homoMap = map[string]bool{}
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
@@ -1047,7 +1059,7 @@ func homonymSearch() error {
 		scanner := bufio.NewScanner(b)
 		// This will not read lines over 64k long, but works for Na'vi words just fine
 		for scanner.Scan() {
-			previousWords[scanner.Text()] = true
+			first2StageMap.Insert(scanner.Text())
 			allWords = append(allWords, scanner.Text())
 		}
 
@@ -1076,8 +1088,8 @@ func homonymSearch() error {
 				homoMapQuery := QueryHelper(results[0])
 
 				// No duplicates
-				if _, ok := homoMap.homoMap[homoMapQuery]; !ok {
-					homoMap.homoMap[homoMapQuery] = 1
+				if !homoMap.Present(homoMapQuery) {
+					homoMap.Insert(homoMapQuery)
 				}
 			}
 			a.WriteString(word + "\n")
@@ -1115,7 +1127,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, false, 100)
+	StageThree(dictCount, 0, 4, 14, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
