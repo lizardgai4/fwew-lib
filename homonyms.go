@@ -915,7 +915,7 @@ func foundResult(conjugation string, homonymfo string) error {
 	lowercase := strings.ToLower(conjugation)
 	_, err2 := previous.WriteString(lowercase + "\n")
 
-	first2StageMap.Insert(strings.ToLower(lowercase))
+	first2StageMap.Insert(lowercase)
 
 	return err2
 }
