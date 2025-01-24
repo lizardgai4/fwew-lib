@@ -33,7 +33,7 @@ var lenitionMap = map[string]string{
 }
 
 var inefficiencyWarning = false
-var nasalAssimilationOnly = true
+var nasalAssimilationOnly = false
 
 /*
 var top10Longest = map[uint8]string{}
