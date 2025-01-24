@@ -18,7 +18,7 @@ import (
 var homonymsArray = []string{"", "", ""}
 var candidates2 Queue = *CreateQueue(30000)
 var first2StageMap = HomoMapStruct{}
-var stage3Map = map[string]bool{}
+var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
 var lenitionMap = map[string]string{
@@ -107,6 +107,12 @@ func (h *HomoMapStruct) Present(item string) bool {
 	return ok
 }
 
+func (h *HomoMapStruct) Clear() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	clear(h.homoMap)
+}
+
 // Insert inserts the item into the queue
 func (q *Queue) Insert(item string) error {
 	q.mu.Lock()
@@ -161,7 +167,7 @@ func DuplicateDetector(query string) bool {
 func inAnyMap(query string) bool {
 	//prev := previousWords.Present(query)
 	first2 := first2StageMap.Present(query)
-	_, third := stage3Map[query]
+	third := stage3Map.Present(query)
 
 	return first2 || third
 }
@@ -340,18 +346,20 @@ func StageTwo() error {
 }
 
 // For StageThree, this adds things to the candidates
-func addToCandidates(candidates []candidate, candidate1 string) []candidate {
+func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bool) {
 	newLength := len([]rune(candidate1))
+	inserted := false
 	// Is it longer than the words we want to check?
 	if newLength > charLimit {
-		return candidates
+		return candidates, false
 	}
 
 	// If it's in the range, is it good?
-	if !inAnyMap(candidate1) {
+	if !stage3Map.Present(candidate1) {
+		inserted = true
 		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
 		//totalCandidates++
-		stage3Map[candidate1] = true
+		stage3Map.Insert(candidate1)
 	}
 
 	//Lenited forms, too
@@ -367,18 +375,23 @@ func addToCandidates(candidates []candidate, candidate1 string) []candidate {
 	}
 
 	if !found {
-		return candidates
+		return candidates, inserted
 	}
 
 	// If it's in the range, is it good?
-	if !inAnyMap(lenited) {
+	if !stage3Map.Present(lenited) {
+		inserted = true
 		// lenited ones will be sorted to appear later
 		candidates = append(candidates, candidate{navi: lenited, length: uint8(newLength + 2)})
 		//totalCandidates++
-		stage3Map[lenited] = true
+		stage3Map.Insert(lenited)
 	}
 
-	return candidates
+	if !inserted && first2StageMap.Present(candidate1) {
+		inserted = true
+	}
+
+	return candidates, inserted
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
@@ -394,7 +407,13 @@ func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, pre
 		return nil
 	}
 
-	*candidates = addToCandidates(*candidates, inputNavi)
+	inserted := true
+	*candidates, inserted = addToCandidates(*candidates, inputNavi)
+
+	// Do not reconstruct things based on things we already reconstructed
+	if !inserted {
+		return nil
+	}
 
 	switch prefixCheck {
 	case 0:
@@ -529,8 +548,13 @@ func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bo
 		return nil
 	}
 
+	inserted := true
 	noBracket := removeBrackets(inputNavi)
-	*candidates = addToCandidates(*candidates, noBracket)
+	*candidates, inserted = addToCandidates(*candidates, noBracket)
+
+	if !inserted {
+		return nil
+	}
 
 	if !prefirstUsed {
 		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed, affixLimit-1)
@@ -561,10 +585,10 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 
 	candidatesSlice := []candidate{}
 
-	candidatesSlice = addToCandidates(candidatesSlice, word.Navi)
+	candidatesSlice, _ = addToCandidates(candidatesSlice, word.Navi)
 
 	if word.PartOfSpeech == "pn." {
-		candidatesSlice = addToCandidates(candidatesSlice, "nì"+word.Navi)
+		candidatesSlice, _ = addToCandidates(candidatesSlice, "nì"+word.Navi)
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
@@ -576,7 +600,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 		for _, a := range []string{"us", "awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 
-			candidatesSlice = addToCandidates(candidatesSlice, participle+"a")
+			candidatesSlice, _ = addToCandidates(candidatesSlice, participle+"a")
 		}
 
 		//None of these can productively combine with infixes
@@ -585,7 +609,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 			lenitedGerund := "s" + strings.TrimPrefix(gerund, "t")
 
-			candidatesSlice = addToCandidates(candidatesSlice, gerund)
+			candidatesSlice, _ = addToCandidates(candidatesSlice, gerund)
 
 			reconjugateNouns(&candidatesSlice, word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
@@ -594,17 +618,17 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 				"tsuk" + word.Navi + "a", "ketsuk" + word.Navi, "hetsuk" + word.Navi, "aketsuk" + word.Navi,
 				"ketsuk" + word.Navi + "a", "hetsuk" + word.Navi + "a"}
 			for _, a := range abilityVerbs {
-				candidatesSlice = addToCandidates(candidatesSlice, a)
+				candidatesSlice, _ = addToCandidates(candidatesSlice, a)
 			}
 
 			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 			for _, a := range []string{"us", "awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-				candidatesSlice = addToCandidates(candidatesSlice, "a"+participle)
+				candidatesSlice, _ = addToCandidates(candidatesSlice, "a"+participle)
 			}
 
 			//Lenited forms, too
-			candidatesSlice = addToCandidates(candidatesSlice, lenitedGerund)
+			candidatesSlice, _ = addToCandidates(candidatesSlice, lenitedGerund)
 			reconjugateNouns(&candidatesSlice, word, lenitedGerund, 10, 0, -1, affixLimit-1)
 		}
 		// Ability to [verb]
@@ -612,11 +636,11 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 		reconjugateNouns(&candidatesSlice, word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
 
 	} else if word.PartOfSpeech == "adj." {
-		candidatesSlice = addToCandidates(candidatesSlice, word.Navi+"a")
+		candidatesSlice, _ = addToCandidates(candidatesSlice, word.Navi+"a")
 
 		if allowPrefixes {
-			candidatesSlice = addToCandidates(candidatesSlice, "a"+word.Navi)
-			candidatesSlice = addToCandidates(candidatesSlice, "nì"+word.Navi)
+			candidatesSlice, _ = addToCandidates(candidatesSlice, "a"+word.Navi)
+			candidatesSlice, _ = addToCandidates(candidatesSlice, "nì"+word.Navi)
 		}
 	}
 
@@ -908,7 +932,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 
 		if wordCount >= startNumber {
 			// Reset dupe detector so it's not taking up all the RAM
-			clear(stage3Map)
+			stage3Map.Clear()
 
 			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
 
@@ -978,6 +1002,10 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 		return errors.New("startNumber is longer than the provided dictionary")
 	}
 
+	if progressIntervalSet <= 0 {
+		return errors.New("progress interval must be 1 or greater")
+	}
+
 	makeWaitGroup.Add(1)
 	go makeHomsAsync(affixLimit, startNumber, start)
 	for _, dict := range dictArray {
@@ -1045,6 +1073,7 @@ func homonymSearch() error {
 	// We'll need this for the previous file
 	homoMap.homoMap = map[string]bool{}
 	first2StageMap.homoMap = map[string]bool{}
+	stage3Map.homoMap = map[string]bool{}
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
