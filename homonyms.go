@@ -374,6 +374,10 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 		}
 	}
 
+	if !inserted && first2StageMap.Present(candidate1) {
+		inserted = true
+	}
+
 	if !found {
 		return candidates, inserted
 	}
@@ -1144,7 +1148,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
