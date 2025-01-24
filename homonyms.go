@@ -33,7 +33,7 @@ var lenitionMap = map[string]string{
 }
 
 var inefficiencyWarning = false
-var nasalAssimilationOnly = false
+var nasalAssimilationOnly = true
 
 /*
 var top10Longest = map[uint8]string{}
@@ -547,34 +547,36 @@ func removeBrackets(input string) string {
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
-func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8) error {
+func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8, add bool) error {
 	if affixLimit == 0 {
 		return nil
 	}
 
-	inserted := true
-	noBracket := removeBrackets(inputNavi)
-	*candidates, inserted = addToCandidates(*candidates, noBracket)
+	if add {
+		inserted := true
+		noBracket := removeBrackets(inputNavi)
+		*candidates, inserted = addToCandidates(*candidates, noBracket)
 
-	if !inserted {
-		return nil
+		if !inserted {
+			return nil
+		}
 	}
 
 	if !prefirstUsed {
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed, affixLimit-1)
+		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed, affixLimit-1, false)
 		for _, a := range prefirst {
-			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", a), true, firstUsed, secondUsed, affixLimit-1)
+			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", a), true, firstUsed, secondUsed, affixLimit-1, true)
 		}
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", "äpeyk"), true, firstUsed, secondUsed, affixLimit-1)
+		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", "äpeyk"), true, firstUsed, secondUsed, affixLimit-1, true)
 	} else if !firstUsed {
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<1>", ""), prefirstUsed, true, secondUsed, affixLimit-1)
+		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<1>", ""), prefirstUsed, true, secondUsed, affixLimit-1, false)
 		for _, a := range first {
-			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<1>", a), prefirstUsed, true, secondUsed, affixLimit-1)
+			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<1>", a), prefirstUsed, true, secondUsed, affixLimit-1, true)
 		}
 	} else if !secondUsed {
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<2>", ""), prefirstUsed, firstUsed, true, affixLimit-1)
+		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<2>", ""), prefirstUsed, firstUsed, true, affixLimit-1, false)
 		for _, a := range second {
-			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<2>", a), prefirstUsed, firstUsed, true, affixLimit-1)
+			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<2>", a), prefirstUsed, firstUsed, true, affixLimit-1, true)
 		}
 	}
 
@@ -598,7 +600,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
 		reconjugateNouns(&candidatesSlice, word, word.Navi, 0, 0, 0, affixLimit)
 	} else if word.PartOfSpeech[0] == 'v' {
-		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit)
+		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit, false)
 
 		// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 		for _, a := range []string{"us", "awn"} {
