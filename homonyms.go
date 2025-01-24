@@ -164,14 +164,6 @@ func DuplicateDetector(query string) bool {
 	return result
 }
 
-func inAnyMap(query string) bool {
-	//prev := previousWords.Present(query)
-	first2 := first2StageMap.Present(query)
-	third := stage3Map.Present(query)
-
-	return first2 || third
-}
-
 // Check for ones that are the exact same, no affixes needed
 func StageOne() error {
 	resultsFile.WriteString("Stage 1:\n")
@@ -196,7 +188,7 @@ func StageOne() error {
 			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
 		}
 
-		if !inAnyMap(standardizedWord) {
+		if !first2StageMap.Present(standardizedWord) {
 			// If the word appears more than once, record it
 			if entry, ok := dictHash[standardizedWord]; ok {
 				if len(entry) > 1 {
@@ -312,10 +304,10 @@ func StageTwo() error {
 
 	err := runOnFile(func(word Word) error {
 		lower := strings.ToLower(word.Navi)
-		if !inAnyMap(lower) {
+		if !first2StageMap.Present(lower) {
 			standardizedWord := word.Navi
 
-			first2StageMap.Insert(word.Navi)
+			first2StageMap.Insert(lower)
 
 			if len(strings.Split(word.Navi, " ")) == 1 {
 				allNaviWords := ""
@@ -874,7 +866,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 				homoMap.Insert(homoMapQuery)
 
 				// No duplicates from previous
-				if inAnyMap(strings.ToLower(a)) {
+				if first2StageMap.Present(strings.ToLower(a)) {
 					continue
 				}
 
@@ -1150,7 +1142,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
