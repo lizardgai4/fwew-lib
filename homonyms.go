@@ -818,7 +818,16 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		//Nasal assimilation stuff
 		if nasalAssimilationOnly {
-			if strings.HasSuffix(a, "tsyìpna") || strings.HasSuffix(a, "tsyìpne") || strings.HasSuffix(a, "fkeykne") {
+			invalidSuffix := false
+			suffixesThings := []string{"tsyìpna", "tsyìpne", "fkeykna", "fkeykne", "tsyìpnuä", "fkeyknuä", "tsyìpnue", "fkeyknue"}
+			for _, suffix := range suffixesThings {
+				if strings.HasSuffix(a, suffix) || strings.HasSuffix(a, suffix+"sì") {
+					invalidSuffix = true
+					break
+				}
+			}
+
+			if invalidSuffix {
 				continue
 			}
 
@@ -1142,7 +1151,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(24)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}

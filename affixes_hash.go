@@ -73,8 +73,8 @@ var lenition = map[string]string{
 }
 
 var prefixes1Nouns = []string{"fì", "tsa", "fra"}
-var prefixes1lenition = []string{"pe", "fay",
-	"pxe", "pepe", "pay", "ay", "me"}
+var prefixes1lenition = []string{"ay", "me", "pxe", "fay",
+	"pay", "pe", "pepe"}
 var stemPrefixes = []string{"fne", "sna", "munsna"}
 var verbPrefixes = []string{"tsuk", "ketsuk"}
 
