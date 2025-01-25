@@ -383,7 +383,7 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 		stage3Map.Insert(lenited)
 	}
 
-	if !inserted && first2StageMap.Present(candidate1) {
+	if !inserted && first2StageMap.Present(lenited) {
 		inserted = true
 	}
 
