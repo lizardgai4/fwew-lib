@@ -34,7 +34,7 @@ var lenitionMap = map[string]string{
 }
 
 var inefficiencyWarning = false
-var nasalAssimilationOnly = false
+var nasalAssimilationOnly = true
 
 /*
 var top10Longest = map[uint8]string{}
@@ -590,6 +590,7 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
+		candidatesSlice, _ = addToCandidates(candidatesSlice, word.Navi+"pe")
 		reconjugateNouns(&candidatesSlice, word, word.Navi, 0, 0, 0, affixLimit)
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit, false)
@@ -605,8 +606,8 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 		if allowPrefixes {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
-			lenitedGerund := "s" + strings.TrimPrefix(gerund, "t")
 
+			candidatesSlice, _ = addToCandidates(candidatesSlice, gerund+"pe")
 			reconjugateNouns(&candidatesSlice, word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
@@ -622,10 +623,6 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 				candidatesSlice, _ = addToCandidates(candidatesSlice, "a"+participle)
 			}
-
-			//Lenited forms, too
-			candidatesSlice, _ = addToCandidates(candidatesSlice, lenitedGerund)
-			reconjugateNouns(&candidatesSlice, word, lenitedGerund, 10, 0, -1, affixLimit-1)
 		}
 		// Ability to [verb]
 		reconjugateNouns(&candidatesSlice, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
@@ -1163,7 +1160,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, true, 100)
+	StageThree(dictCount, 0, 4, 14, 0, false, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
