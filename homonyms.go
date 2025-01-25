@@ -34,7 +34,7 @@ var lenitionMap = map[string]string{
 }
 
 var inefficiencyWarning = false
-var nasalAssimilationOnly = true
+var nasalAssimilationOnly = false
 
 /*
 var top10Longest = map[uint8]string{}
@@ -1160,7 +1160,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, false, 100)
+	StageThree(dictCount, 0, 4, 14, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
