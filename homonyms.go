@@ -346,6 +346,11 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 		return candidates, false
 	}
 
+	// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
+	if strings.HasSuffix(candidate1, "pe") {
+		newLength--
+	}
+
 	// If it's in the range, is it good?
 	if !stage3Map.Present(candidate1) {
 		inserted = true
@@ -590,7 +595,6 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
-		candidatesSlice, _ = addToCandidates(candidatesSlice, word.Navi+"pe")
 		reconjugateNouns(&candidatesSlice, word, word.Navi, 0, 0, 0, affixLimit)
 	} else if word.PartOfSpeech[0] == 'v' {
 		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit, false)
@@ -607,7 +611,6 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 
-			candidatesSlice, _ = addToCandidates(candidatesSlice, gerund+"pe")
 			reconjugateNouns(&candidatesSlice, word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
