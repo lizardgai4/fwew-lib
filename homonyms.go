@@ -1012,6 +1012,9 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 		return errors.New("progress interval must be 1 or greater")
 	}
 
+	resultsFile.WriteString(strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits\n")
+	fmt.Println(strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits")
+
 	makeWaitGroup.Add(1)
 	go makeHomsAsync(affixLimit, startNumber, start)
 	for _, dict := range dictArray {
@@ -1163,7 +1166,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, true, 100)
+	StageThree(dictCount, 0, 127, 127, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
