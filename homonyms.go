@@ -69,7 +69,7 @@ type queueFinished struct {
 
 type candidate struct {
 	navi   string
-	length uint8
+	length int
 }
 
 type Queue struct {
@@ -237,20 +237,20 @@ func AffixCount(word Word) string {
 }
 
 func QueryHelper(results []Word) string {
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Navi != results[j].Navi {
-			return results[i].Navi < results[j].Navi
+	slices.SortFunc(results, func(i, j Word) int {
+		if i.Navi != j.Navi {
+			return strings.Compare(i.Navi, j.Navi)
 		}
 
-		if len(results[i].Affixes.Prefix) != len(results[j].Affixes.Prefix) {
-			return len(results[i].Affixes.Prefix) < len(results[j].Affixes.Prefix)
+		if len(i.Affixes.Prefix) != len(j.Affixes.Prefix) {
+			return len(i.Affixes.Prefix) - len(j.Affixes.Prefix)
 		}
 
-		if len(results[i].Affixes.Suffix) != len(results[j].Affixes.Suffix) {
-			return len(results[i].Affixes.Suffix) < len(results[j].Affixes.Suffix)
+		if len(i.Affixes.Suffix) != len(j.Affixes.Suffix) {
+			return len(i.Affixes.Suffix) - len(j.Affixes.Suffix)
 		}
 
-		return len(results[i].Affixes.Infix) < len(results[j].Affixes.Infix)
+		return len(i.Affixes.Infix) - len(j.Affixes.Infix)
 	})
 
 	var allNaviWords strings.Builder
@@ -354,7 +354,7 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 	// If it's in the range, is it good?
 	if !stage3Map.Present(candidate1) {
 		inserted = true
-		candidates = append(candidates, candidate{navi: candidate1, length: uint8(newLength)})
+		candidates = append(candidates, candidate{navi: candidate1, length: newLength})
 		//totalCandidates++
 		stage3Map.Insert(candidate1)
 	}
@@ -383,7 +383,7 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 	if !stage3Map.Present(lenited) {
 		inserted = true
 		// lenited ones will be sorted to appear later
-		candidates = append(candidates, candidate{navi: lenited, length: uint8(newLength + 2)})
+		candidates = append(candidates, candidate{navi: lenited, length: newLength + 2})
 		//totalCandidates++
 		stage3Map.Insert(lenited)
 	}
@@ -730,7 +730,7 @@ func findUniques(affixes [][]string, reverse bool) string {
 			}
 		}
 
-		sort.Slice(uniqueSlice, func(i, j int) bool { return uniqueSlice[i] < uniqueSlice[j] })
+		slices.SortFunc(uniqueSlice, func(i, j string) int { return strings.Compare(i, j) })
 
 		for _, a := range uniqueSlice {
 			uniques.WriteString(a)
@@ -940,7 +940,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			// Reset dupe detector so it's not taking up all the RAM
 			stage3Map.Clear()
 
-			candidates2slice := []candidate{{navi: word.Navi, length: uint8(len([]rune(word.Navi)))}} //empty array of strings
+			candidates2slice := []candidate{{navi: word.Navi, length: len([]rune(word.Navi))}} //empty array of strings
 
 			// Let the dictionary threads know that we are on number worcCount
 			if wordCount%progressInterval == 0 {
@@ -953,8 +953,8 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				// Get conjugations
 				candidates2slice = append(candidates2slice, reconjugate(word, true, affixLimit)...)
 
-				sort.SliceStable(candidates2slice, func(i, j int) bool {
-					return candidates2slice[i].length < candidates2slice[j].length
+				slices.SortStableFunc(candidates2slice, func(i, j candidate) int {
+					return i.length - j.length
 				})
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
@@ -963,8 +963,8 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				reconjugateNouns(&candidates2slice, word, siless+"tswo", 0, 0, 0, affixLimit)
 				reconjugateNouns(&candidates2slice, word, siless+"siyu", 0, 0, 0, affixLimit)
 
-				sort.SliceStable(candidates2slice, func(i, j int) bool {
-					return candidates2slice[i].length < candidates2slice[j].length
+				slices.SortStableFunc(candidates2slice, func(i, j candidate) int {
+					return i.length - j.length
 				})
 			}
 
@@ -1154,7 +1154,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1166,7 +1166,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 127, 127, 0, true, 100)
+	StageThree(dictCount, 0, 4, 14, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
