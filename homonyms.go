@@ -16,7 +16,7 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 Queue = *CreateQueue(30000)
+var candidates2 Queue = *CreateQueue(10000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
@@ -973,7 +973,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				err3 := candidates2.Insert(a.navi)
 
 				if err3 != nil {
-					for candidates2.Length() > 15000 {
+					for candidates2.Length() > 5000 {
 						time.Sleep(time.Millisecond * 5)
 					}
 					candidates2.Insert(a.navi)
@@ -1154,7 +1154,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
