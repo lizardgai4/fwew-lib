@@ -16,7 +16,7 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 Queue = *CreateQueue(10000)
+var candidates2 Queue = *CreateQueue(12000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
