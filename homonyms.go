@@ -16,7 +16,7 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 Queue = *CreateQueue(10000)
+var candidates2 Queue = *CreateQueue(14000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
@@ -766,7 +766,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			break
 		}
 
-		a, _ := candidates2.Remove()
+		a, err0 := candidates2.Remove()
 
 		if a == finishedSentinelValue {
 			finished.mu.Lock()
@@ -793,7 +793,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			continue
 		}
 
-		if a == "" {
+		if err0 != nil {
 			if !wait {
 				start2 = time.Now()
 				wait = true
@@ -968,12 +968,21 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				})
 			}
 
+			low := !inefficiencyWarning
+
 			for _, a := range candidates2slice {
+				lengthy := candidates2.Length()
+				if !low && inefficiencyWarning && lengthy == 0 {
+					waitedString := "Queue reached 0.  This should only happen at the beginning"
+					fmt.Println(waitedString)
+					resultsFile.WriteString(waitedString + "\n")
+					low = true
+				}
 				//start2 := time.Now()
 				err3 := candidates2.Insert(a.navi)
 
 				if err3 != nil {
-					for candidates2.Length() > 5000 {
+					for candidates2.Length() > 7000 {
 						time.Sleep(time.Millisecond * 5)
 					}
 					candidates2.Insert(a.navi)
@@ -1154,7 +1163,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1166,7 +1175,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, true, 100)
+	StageThree(dictCount, 0, 127, 127, 1000, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
