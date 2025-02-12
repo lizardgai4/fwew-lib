@@ -16,7 +16,7 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 Queue = *CreateQueue(14000)
+var candidates2 Queue = *CreateQueue(16000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
@@ -982,7 +982,7 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 				err3 := candidates2.Insert(a.navi)
 
 				if err3 != nil {
-					for candidates2.Length() > 7000 {
+					for candidates2.Length() > 8000 {
 						time.Sleep(time.Millisecond * 5)
 					}
 					candidates2.Insert(a.navi)
@@ -1163,7 +1163,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1175,7 +1175,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 127, 127, 1000, true, 100)
+	StageThree(dictCount, 0, 4, 14, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
