@@ -807,7 +807,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		totalCandidates++
 
 		//Nasal assimilation stuff
-		/*if nasalAssimilationOnly {
+		if nasalAssimilationOnly {
 			invalidSuffix := false
 			suffixesThings := []string{"tsyìpna", "tsyìpne", "fkeykna", "fkeykne", "tsyìpnuä", "fkeyknuä", "tsyìpnue", "fkeyknue"}
 			for _, suffix := range suffixesThings {
@@ -1174,7 +1174,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, false, 100)
+	StageThree(dictCount, 0, 4, 14, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
