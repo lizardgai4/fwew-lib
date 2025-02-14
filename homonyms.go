@@ -67,11 +67,6 @@ type queueFinished struct {
 	mu       sync.Mutex
 }
 
-type candidate struct {
-	navi   string
-	length int
-}
-
 type Queue struct {
 	mu       sync.Mutex
 	capacity int
@@ -334,14 +329,6 @@ func StageTwo() error {
 	//fmt.Println(homonymsArray[1])
 
 	return nil
-}
-
-func addIfAble(candidates *[][]string, candidate string, newLength int) bool {
-	if newLength < charLimit {
-		(*candidates)[newLength] = append((*candidates)[newLength], candidate)
-		return true
-	}
-	return false
 }
 
 // For StageThree, this adds things to the candidates
