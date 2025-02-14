@@ -79,6 +79,7 @@ type HomoMapStruct struct {
 }
 
 var writeLock sync.Mutex
+var addWaitGroup sync.WaitGroup
 var makeWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup
 var start time.Time
@@ -806,7 +807,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		totalCandidates++
 
 		//Nasal assimilation stuff
-		if nasalAssimilationOnly {
+		/*if nasalAssimilationOnly {
 			invalidSuffix := false
 			suffixesThings := []string{"tsyìpna", "tsyìpne", "fkeykna", "fkeykne", "tsyìpnuä", "fkeyknuä", "tsyìpnue", "fkeyknue"}
 			for _, suffix := range suffixesThings {
@@ -917,6 +918,34 @@ func foundResult(conjugation string, homonymfo string) error {
 	return err2
 }
 
+func addHomsAsync(pigeonhole *[][]string) {
+	defer addWaitGroup.Done()
+	low := !inefficiencyWarning
+	lengthy := candidates2.Length()
+
+	for _, alpha := range *pigeonhole {
+		for _, a := range alpha {
+			if !low && inefficiencyWarning && lengthy == 0 {
+				waitedString := "Queue reached 0.  This should only happen at the beginning"
+				fmt.Println(waitedString)
+				resultsFile.WriteString(waitedString + "\n")
+				low = true
+			}
+			//start2 := time.Now()
+			err3 := candidates2.Insert(a)
+
+			if err3 != nil {
+				for candidates2.Length() > 8000 {
+					time.Sleep(time.Millisecond * 5)
+				}
+				candidates2.Insert(a)
+			}
+
+			//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+		}
+	}
+}
+
 func makeHomsAsync(affixLimit int8, startNumber int) error {
 	defer makeWaitGroup.Done()
 	wordCount = 0
@@ -957,30 +986,9 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 				reconjugateNouns(&pigeonhole, word, siless+"siyu", 0, 0, 0, affixLimit)
 			}
 
-			low := !inefficiencyWarning
-			lengthy := candidates2.Length()
-
-			for _, alpha := range pigeonhole {
-				for _, a := range alpha {
-					if !low && inefficiencyWarning && lengthy == 0 {
-						waitedString := "Queue reached 0.  This should only happen at the beginning"
-						fmt.Println(waitedString)
-						resultsFile.WriteString(waitedString + "\n")
-						low = true
-					}
-					//start2 := time.Now()
-					err3 := candidates2.Insert(a)
-
-					if err3 != nil {
-						for candidates2.Length() > 8000 {
-							time.Sleep(time.Millisecond * 5)
-						}
-						candidates2.Insert(a)
-					}
-
-					//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
-				}
-			}
+			addWaitGroup.Wait()
+			addWaitGroup.Add(1)
+			go addHomsAsync(&pigeonhole)
 		}
 
 		return nil
@@ -1166,7 +1174,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, true, 100)
+	StageThree(dictCount, 0, 4, 14, 0, false, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
