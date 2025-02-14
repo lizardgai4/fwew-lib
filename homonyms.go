@@ -83,7 +83,6 @@ type HomoMapStruct struct {
 	homoMap map[string]bool
 }
 
-var mapMutex sync.Mutex
 var writeLock sync.Mutex
 var makeWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup
@@ -928,7 +927,7 @@ func foundResult(conjugation string, homonymfo string) error {
 	return err2
 }
 
-func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
+func makeHomsAsync(affixLimit int8, startNumber int) error {
 	defer makeWaitGroup.Done()
 	wordCount = 0
 
@@ -940,55 +939,69 @@ func makeHomsAsync(affixLimit int8, startNumber int, start time.Time) error {
 			// Reset dupe detector so it's not taking up all the RAM
 			stage3Map.Clear()
 
-			candidates2slice := []candidate{{navi: word.Navi, length: len([]rune(word.Navi))}} //empty array of strings
+			pigeonhole := make([][]string, charLimit+1)
+
+			pigeonhole[1] = append(pigeonhole[1], word.Navi)
+
+			//candidates2slice := []candidate{{navi: word.Navi, length: len([]rune(word.Navi))}} //empty array of strings
 
 			// Let the dictionary threads know that we are on number worcCount
 			if wordCount%progressInterval == 0 {
-				candidates2slice = append(candidates2slice, candidate{navi: strconv.Itoa(wordCount), length: 0})
+				pigeonhole[0] = append(pigeonhole[0], strconv.Itoa(wordCount))
 			}
 
 			// No multiword words
 			if !strings.Contains(word.Navi, " ") {
 
 				// Get conjugations
-				candidates2slice = append(candidates2slice, reconjugate(word, true, affixLimit)...)
+				for _, a := range reconjugate(word, true, affixLimit) {
+					if a.length > charLimit {
+						continue
+					}
+					pigeonhole[a.length] = append(pigeonhole[a.length], a.navi)
+				}
 
-				slices.SortStableFunc(candidates2slice, func(i, j candidate) int {
+				/*slices.SortStableFunc(candidates2slice, func(i, j candidate) int {
 					return i.length - j.length
-				})
+				})*/
 			} else if strings.HasSuffix(word.Navi, " si") {
 				// "[word] si" can take the form "[word]tswo"
 				siless := strings.TrimSuffix(word.Navi, " si")
 
+				candidates2slice := []candidate{{navi: word.Navi, length: len([]rune(word.Navi))}} //empty array of strings
 				reconjugateNouns(&candidates2slice, word, siless+"tswo", 0, 0, 0, affixLimit)
 				reconjugateNouns(&candidates2slice, word, siless+"siyu", 0, 0, 0, affixLimit)
-
-				slices.SortStableFunc(candidates2slice, func(i, j candidate) int {
-					return i.length - j.length
-				})
+				for _, a := range candidates2slice {
+					if a.length > charLimit {
+						continue
+					}
+					pigeonhole[a.length] = append(pigeonhole[a.length], a.navi)
+				}
 			}
 
 			low := !inefficiencyWarning
+			lengthy := candidates2.Length()
 
-			for _, a := range candidates2slice {
-				lengthy := candidates2.Length()
-				if !low && inefficiencyWarning && lengthy == 0 {
-					waitedString := "Queue reached 0.  This should only happen at the beginning"
-					fmt.Println(waitedString)
-					resultsFile.WriteString(waitedString + "\n")
-					low = true
-				}
-				//start2 := time.Now()
-				err3 := candidates2.Insert(a.navi)
-
-				if err3 != nil {
-					for candidates2.Length() > 8000 {
-						time.Sleep(time.Millisecond * 5)
+			for _, alpha := range pigeonhole {
+				for _, a := range alpha {
+					if !low && inefficiencyWarning && lengthy == 0 {
+						waitedString := "Queue reached 0.  This should only happen at the beginning"
+						fmt.Println(waitedString)
+						resultsFile.WriteString(waitedString + "\n")
+						low = true
 					}
-					candidates2.Insert(a.navi)
-				}
+					//start2 := time.Now()
+					err3 := candidates2.Insert(a)
 
-				//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+					if err3 != nil {
+						for candidates2.Length() > 8000 {
+							time.Sleep(time.Millisecond * 5)
+						}
+						candidates2.Insert(a)
+					}
+
+					//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
+				}
 			}
 		}
 
@@ -1025,7 +1038,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 	fmt.Println(strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits")
 
 	makeWaitGroup.Add(1)
-	go makeHomsAsync(affixLimit, startNumber, start)
+	go makeHomsAsync(affixLimit, startNumber)
 	for _, dict := range dictArray {
 		checkWaitGroup.Add(1)
 		go CheckHomsAsync(dict, minAffix)
