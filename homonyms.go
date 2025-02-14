@@ -390,11 +390,9 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	if !stage3Map.Present(lenited) {
 		inserted = true
 		// lenited ones will be sorted to appear later
-		if newLength+2 < charLimit {
-			(*candidates)[newLength] = append((*candidates)[newLength], lenited)
-			//totalCandidates++
-			stage3Map.Insert(lenited)
-		}
+		(*candidates)[newLength] = append((*candidates)[newLength], lenited)
+		//totalCandidates++
+		stage3Map.Insert(lenited)
 
 	}
 
@@ -944,7 +942,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 			// Reset dupe detector so it's not taking up all the RAM
 			stage3Map.Clear()
 
-			pigeonhole := make([][]string, charLimit+1)
+			pigeonhole := make([][]string, charLimit+3)
 
 			pigeonhole[1] = append(pigeonhole[1], word.Navi)
 
@@ -1169,7 +1167,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
