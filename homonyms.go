@@ -336,13 +336,21 @@ func StageTwo() error {
 	return nil
 }
 
+func addIfAble(candidates *[][]string, candidate string, newLength int) bool {
+	if newLength < charLimit {
+		(*candidates)[newLength] = append((*candidates)[newLength], candidate)
+		return true
+	}
+	return false
+}
+
 // For StageThree, this adds things to the candidates
-func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bool) {
+func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	newLength := len([]rune(candidate1))
 	inserted := false
 	// Is it longer than the words we want to check?
 	if newLength > charLimit {
-		return candidates, false
+		return false
 	}
 
 	// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
@@ -353,7 +361,7 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 	// If it's in the range, is it good?
 	if !stage3Map.Present(candidate1) {
 		inserted = true
-		candidates = append(candidates, candidate{navi: candidate1, length: newLength})
+		(*candidates)[newLength] = append((*candidates)[newLength], candidate1)
 		//totalCandidates++
 		stage3Map.Insert(candidate1)
 	}
@@ -375,27 +383,30 @@ func addToCandidates(candidates []candidate, candidate1 string) ([]candidate, bo
 	}
 
 	if !found {
-		return candidates, inserted
+		return inserted
 	}
 
 	// If it's in the range, is it good?
 	if !stage3Map.Present(lenited) {
 		inserted = true
 		// lenited ones will be sorted to appear later
-		candidates = append(candidates, candidate{navi: lenited, length: newLength + 2})
-		//totalCandidates++
-		stage3Map.Insert(lenited)
+		if newLength+2 < charLimit {
+			(*candidates)[newLength] = append((*candidates)[newLength], lenited)
+			//totalCandidates++
+			stage3Map.Insert(lenited)
+		}
+
 	}
 
 	if !inserted && first2StageMap.Present(lenited) {
 		inserted = true
 	}
 
-	return candidates, inserted
+	return inserted
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
-func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8, affixCountdown int8) error {
+func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, prefixCheck int, suffixCheck int, unlenite int8, affixCountdown int8) error {
 	// End state: Limit to 2 affixes per noun
 	if affixCountdown == 0 {
 		return nil
@@ -408,7 +419,7 @@ func reconjugateNouns(candidates *[]candidate, input Word, inputNavi string, pre
 	}
 
 	inserted := true
-	*candidates, inserted = addToCandidates(*candidates, inputNavi)
+	inserted = addToCandidates(candidates, inputNavi)
 
 	// Do not reconstruct things based on things we already reconstructed
 	if !inserted {
@@ -543,7 +554,7 @@ func removeBrackets(input string) string {
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
-func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8, add bool) error {
+func reconjugateVerbs(candidates *[][]string, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8, add bool) error {
 	if affixLimit == 0 {
 		return nil
 	}
@@ -551,7 +562,7 @@ func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bo
 	if add {
 		inserted := true
 		noBracket := removeBrackets(inputNavi)
-		*candidates, inserted = addToCandidates(*candidates, noBracket)
+		inserted = addToCandidates(candidates, noBracket)
 
 		if !inserted {
 			return nil
@@ -579,30 +590,26 @@ func reconjugateVerbs(candidates *[]candidate, inputNavi string, prefirstUsed bo
 	return nil
 }
 
-func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
+func reconjugate(pigeonhole *[][]string, word Word, allowPrefixes bool, affixLimit int8) {
 	// remove "+" and "--", we want to be able to search with and without those!
 	word.Navi = strings.ReplaceAll(word.Navi, "+", "")
 	word.Navi = strings.ReplaceAll(word.Navi, "--", "")
 	word.Navi = strings.ToLower(word.Navi)
 
-	candidatesSlice := []candidate{}
-
-	candidatesSlice, _ = addToCandidates(candidatesSlice, word.Navi)
-
 	if word.PartOfSpeech == "pn." {
-		candidatesSlice, _ = addToCandidates(candidatesSlice, "nì"+word.Navi)
+		addToCandidates(pigeonhole, "nì"+word.Navi)
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
-		reconjugateNouns(&candidatesSlice, word, word.Navi, 0, 0, 0, affixLimit)
+		reconjugateNouns(pigeonhole, word, word.Navi, 0, 0, 0, affixLimit)
 	} else if word.PartOfSpeech[0] == 'v' {
-		reconjugateVerbs(&candidatesSlice, word.InfixLocations, false, false, false, affixLimit, false)
+		reconjugateVerbs(pigeonhole, word.InfixLocations, false, false, false, affixLimit, false)
 
 		// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 		for _, a := range []string{"us", "awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 
-			candidatesSlice, _ = addToCandidates(candidatesSlice, participle+"a")
+			addToCandidates(pigeonhole, participle+"a")
 		}
 
 		//None of these can productively combine with infixes
@@ -610,36 +617,34 @@ func reconjugate(word Word, allowPrefixes bool, affixLimit int8) []candidate {
 			// Gerunds
 			gerund := removeBrackets("tì" + strings.ReplaceAll(word.InfixLocations, "<1>", "us"))
 
-			reconjugateNouns(&candidatesSlice, word, gerund, 0, 0, 0, affixLimit-1)
+			reconjugateNouns(pigeonhole, word, gerund, 0, 0, 0, affixLimit-1)
 			//candidates2 = append(candidates2, removeBrackets("nì"+strings.ReplaceAll(word.InfixLocations, "<1>", "awn")))
 			// [verb]-able
 			abilityVerbs := []string{"tsuk" + word.Navi, "suk" + word.Navi, "atsuk" + word.Navi,
 				"tsuk" + word.Navi + "a", "ketsuk" + word.Navi, "hetsuk" + word.Navi, "aketsuk" + word.Navi,
 				"ketsuk" + word.Navi + "a", "hetsuk" + word.Navi + "a"}
 			for _, a := range abilityVerbs {
-				candidatesSlice, _ = addToCandidates(candidatesSlice, a)
+				addToCandidates(pigeonhole, a)
 			}
 
 			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 			for _, a := range []string{"us", "awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-				candidatesSlice, _ = addToCandidates(candidatesSlice, "a"+participle)
+				addToCandidates(pigeonhole, "a"+participle)
 			}
 		}
 		// Ability to [verb]
-		reconjugateNouns(&candidatesSlice, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
-		reconjugateNouns(&candidatesSlice, word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
+		reconjugateNouns(pigeonhole, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
+		reconjugateNouns(pigeonhole, word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
 
 	} else if word.PartOfSpeech == "adj." {
-		candidatesSlice, _ = addToCandidates(candidatesSlice, word.Navi+"a")
+		addToCandidates(pigeonhole, word.Navi+"a")
 
 		if allowPrefixes {
-			candidatesSlice, _ = addToCandidates(candidatesSlice, "a"+word.Navi)
-			candidatesSlice, _ = addToCandidates(candidatesSlice, "nì"+word.Navi)
+			addToCandidates(pigeonhole, "a"+word.Navi)
+			addToCandidates(pigeonhole, "nì"+word.Navi)
 		}
 	}
-
-	return candidatesSlice
 }
 
 // Make alphabetized lists of strings
@@ -954,12 +959,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 			if !strings.Contains(word.Navi, " ") {
 
 				// Get conjugations
-				for _, a := range reconjugate(word, true, affixLimit) {
-					if a.length > charLimit {
-						continue
-					}
-					pigeonhole[a.length] = append(pigeonhole[a.length], a.navi)
-				}
+				reconjugate(&pigeonhole, word, true, affixLimit)
 
 				/*slices.SortStableFunc(candidates2slice, func(i, j candidate) int {
 					return i.length - j.length
@@ -968,15 +968,8 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 				// "[word] si" can take the form "[word]tswo"
 				siless := strings.TrimSuffix(word.Navi, " si")
 
-				candidates2slice := []candidate{{navi: word.Navi, length: len([]rune(word.Navi))}} //empty array of strings
-				reconjugateNouns(&candidates2slice, word, siless+"tswo", 0, 0, 0, affixLimit)
-				reconjugateNouns(&candidates2slice, word, siless+"siyu", 0, 0, 0, affixLimit)
-				for _, a := range candidates2slice {
-					if a.length > charLimit {
-						continue
-					}
-					pigeonhole[a.length] = append(pigeonhole[a.length], a.navi)
-				}
+				reconjugateNouns(&pigeonhole, word, siless+"tswo", 0, 0, 0, affixLimit)
+				reconjugateNouns(&pigeonhole, word, siless+"siyu", 0, 0, 0, affixLimit)
 			}
 
 			low := !inefficiencyWarning
