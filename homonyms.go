@@ -378,7 +378,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	if !stage3Map.Present(lenited) {
 		inserted = true
 		// lenited ones will be sorted to appear later
-		(*candidates)[newLength] = append((*candidates)[newLength], lenited)
+		(*candidates)[newLength+2] = append((*candidates)[newLength+2], lenited)
 		//totalCandidates++
 		stage3Map.Insert(lenited)
 
@@ -415,9 +415,15 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 	switch prefixCheck {
 	case 0:
 		for _, element := range stemPrefixes {
-			// If it has a lenition-causing prefix
-			newWord := element + inputNavi
-			reconjugateNouns(candidates, input, newWord, 1, suffixCheck, 0, affixCountdown-1)
+			if strings.HasSuffix(element, string(inputNavi[0])) {
+				// regardless of whether or not it's found
+				newWord := element + strings.TrimPrefix(inputNavi, string(inputNavi[0]))
+				reconjugateNouns(candidates, input, newWord, 1, suffixCheck, 0, affixCountdown-1)
+			} else {
+				// regardless of whether or not it's found
+				newWord := element + inputNavi
+				reconjugateNouns(candidates, input, newWord, 1, suffixCheck, 0, affixCountdown-1)
+			}
 		}
 		fallthrough
 	case 1:
@@ -425,8 +431,15 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 	case 2:
 		// Non-lenition prefixes for nouns only
 		for _, element := range prefixes1Nouns {
-			newWord := element + inputNavi
-			reconjugateNouns(candidates, input, newWord, 4, suffixCheck, 0, affixCountdown-1)
+			if strings.HasSuffix(element, string(inputNavi[0])) {
+				// regardless of whether or not it's found
+				newWord := element + strings.TrimPrefix(inputNavi, string(inputNavi[0]))
+				reconjugateNouns(candidates, input, newWord, 4, suffixCheck, 0, affixCountdown-1)
+			} else {
+				// regardless of whether or not it's found
+				newWord := element + inputNavi
+				reconjugateNouns(candidates, input, newWord, 4, suffixCheck, 0, affixCountdown-1)
+			}
 		}
 		fallthrough
 	case 3:
@@ -444,9 +457,9 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 
 		for _, element := range append(prefixes1lenition, "tsay") {
 			// If it has a lenition-causing prefix
-			if strings.HasPrefix(lenited, "e") && strings.HasSuffix(element, "e") {
+			if strings.HasSuffix(element, string(lenited[0])) {
 				// regardless of whether or not it's found
-				lenited2 := element + strings.TrimPrefix(lenited, "e")
+				lenited2 := element + strings.TrimPrefix(lenited, string(lenited[0]))
 				reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
 			} else {
 				// regardless of whether or not it's found
@@ -465,8 +478,15 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 		fallthrough
 	case 1:
 		for _, element := range stemSuffixes {
-			newWord := inputNavi + element
-			reconjugateNouns(candidates, input, newWord, prefixCheck, 2, unlenite, affixCountdown-1)
+			if strings.HasSuffix(inputNavi, string(element[0])) {
+				// regardless of whether or not it's found
+				newWord := strings.TrimSuffix(inputNavi, string(element[0])) + element
+				reconjugateNouns(candidates, input, newWord, prefixCheck, 2, unlenite, affixCountdown-1)
+			} else {
+				// regardless of whether or not it's found
+				newWord := inputNavi + element
+				reconjugateNouns(candidates, input, newWord, prefixCheck, 2, unlenite, affixCountdown-1)
+			}
 		}
 		fallthrough
 	case 2:
@@ -474,8 +494,15 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 		reconjugateNouns(candidates, input, newWord, prefixCheck, 3, unlenite, affixCountdown-1)
 		fallthrough
 	case 3:
-		newWord := inputNavi + "pe"
-		reconjugateNouns(candidates, input, newWord, prefixCheck, 4, unlenite, affixCountdown-1)
+		if strings.HasSuffix(inputNavi, "p") {
+			// regardless of whether or not it's found
+			newWord := inputNavi + "e"
+			reconjugateNouns(candidates, input, newWord, prefixCheck, 4, unlenite, affixCountdown-1)
+		} else {
+			// regardless of whether or not it's found
+			newWord := inputNavi + "pe"
+			reconjugateNouns(candidates, input, newWord, prefixCheck, 4, unlenite, affixCountdown-1)
+		}
 		fallthrough
 	case 4:
 		vowel := false
@@ -529,8 +556,15 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 		}
 		fallthrough
 	case 5:
-		newWord := inputNavi + "sì"
-		reconjugateNouns(candidates, input, newWord, prefixCheck, 6, unlenite, affixCountdown-1)
+		if strings.HasSuffix(inputNavi, "s") {
+			// regardless of whether or not it's found
+			newWord := inputNavi + "ì"
+			reconjugateNouns(candidates, input, newWord, prefixCheck, 6, unlenite, affixCountdown-1)
+		} else {
+			// regardless of whether or not it's found
+			newWord := inputNavi + "sì"
+			reconjugateNouns(candidates, input, newWord, prefixCheck, 6, unlenite, affixCountdown-1)
+		}
 	}
 
 	return nil
