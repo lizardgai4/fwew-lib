@@ -1227,7 +1227,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(4)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
