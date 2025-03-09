@@ -188,8 +188,8 @@ func StageOne() error {
 			// If the word appears more than once, record it
 			if entry, ok := dictHash[standardizedWord]; ok {
 				if len(entry) > 1 {
-					query := QueryHelper(entry)
-					foundResult(standardizedWord, query)
+					query, _ := QueryHelper(entry)
+					foundResult(standardizedWord, query, true)
 				}
 			}
 		}
@@ -231,7 +231,7 @@ func AffixCount(word Word) string {
 	return fixes.String()
 }
 
-func QueryHelper(results []Word) string {
+func QueryHelper(results []Word) (string, bool) {
 	slices.SortFunc(results, func(i, j Word) int {
 		if i.Navi != j.Navi {
 			return strings.Compare(i.Navi, j.Navi)
@@ -275,6 +275,32 @@ func QueryHelper(results []Word) string {
 		}
 	}
 
+	// All the conditions you want limit shown results to
+	// Commented code is an example
+	allGood := true
+	/*allGood := false
+
+	hasPrefix := false
+
+	for _, a := range allPrefixes {
+		if len(a) > 0 {
+			hasPrefix = true
+			break
+		}
+	}
+
+	if hasPrefix {
+		for _, a := range allSuffixes {
+			if implContainsAny(a, []string{"o"}) {
+				allGood = true
+				break
+			}
+			if allGood {
+				break
+			}
+		}
+	}*/
+
 	allNaviWords.WriteString("] ")
 
 	preUnique := findUniques(allPrefixes, false)
@@ -290,7 +316,7 @@ func QueryHelper(results []Word) string {
 	sufUnique := findUniques(allSuffixes, true)
 	allNaviWords.WriteString(sufUnique)
 
-	return allNaviWords.String()
+	return allNaviWords.String(), allGood
 }
 
 // Check for ones that are the exact same, no affixes needed
@@ -305,14 +331,12 @@ func StageTwo() error {
 			first2StageMap.Insert(lower)
 
 			if len(strings.Split(word.Navi, " ")) == 1 {
-				allNaviWords := ""
-
 				// If the word can conjugate into something else, record it
 				results, err := TranslateFromNaviHash(dictArray[0], standardizedWord, true)
 				if err == nil && len(results[0]) > 2 {
 					results[0] = results[0][1:]
-					allNaviWords = QueryHelper(results[0])
-					foundResult(standardizedWord, allNaviWords)
+					allNaviWords, show := QueryHelper(results[0])
+					foundResult(standardizedWord, allNaviWords, show)
 				}
 
 				// Lenited forms should be taken care of
@@ -894,7 +918,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 			results[0] = results[0][1:]
 
-			homoMapQuery := QueryHelper(results[0])
+			homoMapQuery, show := QueryHelper(results[0])
 
 			// No duplicates
 
@@ -908,7 +932,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 				stringy := "dict " + strconv.Itoa(int(dict.dictNum)) + ": [" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
 
-				err := foundResult(a, stringy)
+				err := foundResult(a, stringy, show)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
@@ -940,14 +964,16 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 	resultsFile.WriteString(printMessage + "\n")
 }
 
-func foundResult(conjugation string, homonymfo string) error {
+func foundResult(conjugation string, homonymfo string, show bool) error {
 	writeLock.Lock()
 	defer writeLock.Unlock()
 	resultCount++
-	fmt.Println(homonymfo)
-	_, err := resultsFile.WriteString(homonymfo + "\n")
-	if err != nil {
-		return err
+	if show {
+		fmt.Println(homonymfo)
+		_, err := resultsFile.WriteString(homonymfo + "\n")
+		if err != nil {
+			return err
+		}
 	}
 	lowercase := strings.ToLower(conjugation)
 	_, err2 := previous.WriteString(lowercase + "\n")
@@ -1171,7 +1197,7 @@ func homonymSearch() error {
 
 				results[0] = results[0][1:]
 
-				homoMapQuery := QueryHelper(results[0])
+				homoMapQuery, _ := QueryHelper(results[0])
 
 				// No duplicates
 				if !homoMap.Present(homoMapQuery) {
@@ -1201,7 +1227,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
