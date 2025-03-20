@@ -13,7 +13,7 @@
 //	along with Fwew.  If not, see http://gnu.org/licenses/
 
 // Package main contains all the things. lib.go handles common functions.
-package fwew_lib
+package main
 
 import (
 	"crypto/sha1"
@@ -172,6 +172,9 @@ func DownloadDict(filepath string) error {
 
 	// create new file, this will remove the old file, if it exists
 	err = os.Mkdir(path.Dir(filepath), 0755)
+	if err != nil {
+		return err
+	}
 	out, err := os.Create(filepath)
 	if err != nil {
 		return err

@@ -13,7 +13,7 @@
 //	along with Fwew.  If not, see http://gnu.org/licenses/
 
 // Package main contains all the things. version.go handles program version.
-package fwew_lib
+package main
 
 import "fmt"
 

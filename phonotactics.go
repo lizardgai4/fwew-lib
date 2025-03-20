@@ -1,4 +1,4 @@
-package fwew_lib
+package main
 
 import (
 	"strconv"
@@ -77,7 +77,7 @@ func IsValidNaviHelper(word string, lang string) string {
 	// It used unicode values to ensure it has nothing invalid
 	// We don't have to worry about uppercase letters because it handled them already
 	nonNaviLetters := ""
-	for _, a := range []rune(word) {
+	for _, a := range word {
 		if int(a) > int(rune('ù')) {
 			nonNaviLetters += string(a)
 		} else if int(a) < int(rune('ù')) && int(a) > int(rune('ì')) {
@@ -121,7 +121,7 @@ func IsValidNaviHelper(word string, lang string) string {
 
 	badLetters := ""
 	tempWord := ""
-	for _, a := range []rune(word) {
+	for _, a := range word {
 		found := false
 		if voiced_plosive, ok := firstCheckLetters[a]; ok {
 			if voiced_plosive {
@@ -158,7 +158,7 @@ func IsValidNaviHelper(word string, lang string) string {
 
 	syllable_boundaries := ""
 	word_nuclei := []rune{}
-	for _, a := range []rune(compressed) {
+	for _, a := range compressed {
 		found := false
 		for _, b := range nuclei {
 			if a == b {

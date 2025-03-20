@@ -1,4 +1,4 @@
-package fwew_lib
+package main
 
 import (
 	"strings"
@@ -54,24 +54,6 @@ var unlenition = map[string][]string{
 	"ù":  {"ù", "'ù"},
 }
 
-var lenitionable = []string{
-	"ts",
-	"px", "tx", "kx",
-	"p", "t", "k",
-	"f", "s", "h",
-	"'",
-}
-var lenition = map[string]string{
-	"px": "p",
-	"tx": "t",
-	"kx": "k",
-	"p":  "f",
-	"t":  "s",
-	"k":  "h",
-	"ts": "s",
-	"'":  "",
-}
-
 var prefixes1Nouns = []string{"fì", "tsa", "fra"}
 var prefixes1lenition = []string{"ay", "me", "pxe", "fay",
 	"pay", "pe", "pepe"}
@@ -102,12 +84,12 @@ var adposuffixes = []string{
 }
 
 var vowelSuffixes = map[string][]string{
-	"äo":  []string{"ä", "e"},
-	"eo":  []string{"e"},
-	"io":  []string{"i"},
-	"uo":  []string{"u"},
-	"ìlä": []string{"ì"},
-	"o":   []string{"o"},
+	"äo":  {"ä", "e"},
+	"eo":  {"e"},
+	"io":  {"i"},
+	"uo":  {"u"},
+	"ìlä": {"ì"},
+	"o":   {"o"},
 }
 var stemSuffixes = []string{"tsyìp", "fkeyk"}
 var verbSuffixes = []string{"tswo", "yu"}
@@ -192,29 +174,6 @@ func isDuplicateFix(fixes []string, fix string) (newFixes []string) {
 	}
 	fixes = append(fixes, fix)
 	return fixes
-}
-
-func infixError(query string, didYouMean string, ipa string) Word {
-	d := Word{}
-	d.Navi = query
-	d.EN = "Did you mean **" + didYouMean + "**?" // English
-	// TODO: Translations
-	d.DE = d.EN // German (Deutsch)
-	d.ES = d.EN // Spanish (Español)
-	d.ET = d.EN // Estonian (Eesti)
-	d.FR = d.EN // French (Français)
-	d.HU = d.EN // Hungarian (Magyar)
-	d.KO = d.EN // Korean (한국어)
-	d.NL = d.EN // Dutch (Nederlands)
-	d.PL = d.EN // Polish (Polski)
-	d.PT = d.EN // Portuguese (Português)
-	d.RU = d.EN // Russian (Русский)
-	d.SV = d.EN // Swedish (Svenska)
-	d.TR = d.EN // Turkish (Türkçe)
-	d.UK = d.EN // Ukrainian (Українська)
-	d.IPA = ipa
-	d.PartOfSpeech = "err."
-	return d
 }
 
 // fuction to check given string is in array or not

@@ -12,8 +12,8 @@
 //	You should have received a copy of the GNU General Public License
 //	along with Fwew.  If not, see http://gnu.org/licenses/
 
-// Package fwew_lib contains all the things. word.go is home to the Word struct.
-package fwew_lib
+// package main contains all the things. word.go is home to the Word struct.
+package main
 
 import (
 	"fmt"

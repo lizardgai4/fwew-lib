@@ -1,4 +1,4 @@
-package fwew_lib
+package main
 
 import (
 	"bufio"
@@ -54,6 +54,7 @@ var changePOS = map[string]bool{
 
 var resultsFile *os.File
 var previous *os.File
+var timeFormat = "2006-01-02 15:04:05"
 
 //var dupeLengthsMap = map[int]int{}
 
@@ -834,13 +835,15 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			if wordNumber%progressInterval == 0 {
 				total_seconds := time.Since(start)
 
-				printMessage := "Word " + strconv.Itoa(wordNumber) + " is in dict " +
+				now := time.Now().Format(timeFormat)
+
+				printMessage := now + " Word " + strconv.Itoa(wordNumber) + " is in dict " +
 					strconv.Itoa(int(dict.dictNum)) + ".  Time elapsed is " +
 					strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 					strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
 					strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds.  " + strconv.Itoa(totalCandidates) + " conjugations checked"
 
-				log.Printf(printMessage)
+				fmt.Println(printMessage)
 				resultsFile.WriteString(printMessage + "\n")
 			}
 			continue
@@ -960,7 +963,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 	printMessage := "Dictionary " + strconv.Itoa(int(dict.dictNum)) + " finished"
 
-	log.Printf(printMessage)
+	fmt.Println(printMessage)
 	resultsFile.WriteString(printMessage + "\n")
 }
 
@@ -1107,10 +1110,12 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 
 	total_seconds := time.Since(start)
 
-	finalString := "Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+	now := time.Now().Format(timeFormat)
+
+	finalString := now + " Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
 		strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
 		strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds"
-	log.Printf(finalString)
+	fmt.Println(finalString)
 	resultsFile.WriteString(finalString + "\n")
 
 	checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)

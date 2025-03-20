@@ -13,8 +13,8 @@
 //	along with Fwew.  If not, see http://gnu.org/licenses/
 // cSpell: disable
 
-// Package fwew_lib contains all the things. numbers.go contains all the stuff for the number parsing
-package fwew_lib
+// package main contains all the things. numbers.go contains all the stuff for the number parsing
+package main
 
 import (
 	"regexp"

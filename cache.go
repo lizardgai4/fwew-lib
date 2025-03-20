@@ -1,4 +1,4 @@
-package fwew_lib
+package main
 
 import (
 	"bufio"
@@ -23,8 +23,6 @@ var dictHashCached bool
 var dictHash2 MetaDict
 var dictHash2Cached bool
 var homonyms string
-var oddballs string
-var multiIPA string
 
 type MetaDict struct {
 	EN map[string][]string
@@ -60,7 +58,6 @@ var nkxSub = map[string]string{}
 
 // A mutex to ensure requests to
 var universalLock sync.Mutex
-var phonoLock sync.Mutex
 
 // helper for nkx for shortest words first
 func shortestFirst(array []string, input string) []string {
@@ -478,9 +475,6 @@ func CacheDictHashOrig(mysql bool) error {
 
 	tempHoms := []string{}
 
-	//Clear to avoid duplicates
-	multiIPA = ""
-
 	var f = func(word Word) error {
 		standardizedWord := word.Navi
 		badChars := `~@#$%^&*()[]{}<>_/.,;:!?|+\"„“”«»`
@@ -547,24 +541,10 @@ func CacheDictHashOrig(mysql bool) error {
 
 		//find words with multiple IPAs
 		if strings.Contains(word.IPA, " or ") {
-			multiIPA += word.Navi + " "
 			secondTerm := RomanizeSecondIPA(word.IPA)
 			if secondTerm != standardizedWord {
 				dictHash[secondTerm] = append(dictHash[secondTerm], word)
 			}
-		}
-
-		// See whether or not it violates normal phonotactic rules like Jakesully or Oìsss
-		valid := true
-		for _, a := range strings.Split(IsValidNavi(word.Navi, "en", false), "\n") {
-			// Check every word.  If one of them isn't good, write down the word
-			if len(a) > 0 && (!strings.Contains(a, "Valid:") || strings.Contains(a, "reef")) {
-				valid = false
-				break
-			}
-		}
-		if !valid {
-			oddballs += word.Navi + " "
 		}
 
 		return nil
@@ -800,7 +780,6 @@ func UncacheHashDict() {
 	dictHashCached = false
 	dictHash = nil
 	homonyms = ""
-	oddballs = ""
 }
 
 func UncacheHashDict2() {

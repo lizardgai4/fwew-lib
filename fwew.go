@@ -12,7 +12,7 @@
 //	along with Fwew.  If not, see http://gnu.org/licenses/
 
 // Package main contains all the things
-package fwew_lib
+package main
 
 import (
 	"fmt"
@@ -27,8 +27,6 @@ import (
 const (
 	space string = " "
 )
-
-var debugMode bool
 
 /* To help deduce phonemes */
 var romanization2 = map[string]string{
@@ -74,49 +72,6 @@ func FwewDictInit(dictNum uint8) *FwewDict {
 	fmt.Println("Dictionary " + strconv.Itoa(int(dictNum)) + " ready")
 
 	return &newDict
-}
-
-func intersection(a, b string) (c string) {
-	m := make(map[rune]bool)
-	for _, r := range a {
-		m[r] = true
-	}
-	for _, r := range b {
-		if _, ok := m[r]; ok {
-			c += string(r)
-		}
-	}
-	return
-}
-
-func (w *Word) similarity(other string) float64 {
-	if w.Navi == other {
-		return 1.0
-	}
-	if len(w.Navi) > len(other)+1 {
-		return 0.0
-	}
-	if w.Navi == "nga" && other == "ngey" {
-		return 1.0
-	}
-	if w.Navi == "'ia" && strings.HasSuffix(other, "ì'usiä") {
-		return 1.0
-	}
-	vowels := "aäeiìoulr"
-	w0v := intersection(w.Navi, vowels)
-	w1v := intersection(other, vowels)
-	wis := intersection(w.Navi, other)
-	wav := intersection(w0v, other)
-	if len(w0v) > len(w1v) {
-		return 0.0
-	}
-	if len(wav) == 0 {
-		return 0.0
-	}
-	scc := len(wis)
-	iratio := float64(scc) / float64(len(w.Navi))
-	lratio := float64(len(w.Navi)) / float64(len(other))
-	return (iratio + lratio) / 2
 }
 
 func identicalRunes(first string, second string) bool {

@@ -1,4 +1,4 @@
-package fwew_lib
+package main
 
 import (
 	"testing"

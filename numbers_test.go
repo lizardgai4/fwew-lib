@@ -13,8 +13,8 @@
 //	along with Fwew.  If not, see http://gnu.org/licenses/
 // cSpell: disable
 
-// Package fwew_lib contains all the things. numbers_test.go tests numbers.go functions.
-package fwew_lib
+// package main contains all the things. numbers_test.go tests numbers.go functions.
+package main
 
 import (
 	"errors"

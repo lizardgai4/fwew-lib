@@ -1,4 +1,4 @@
-package fwew_lib
+package main
 
 /*
  *	The core of the name generator
@@ -170,11 +170,10 @@ func quickReef(input string) string {
 func specialU(input string, ipa string) string {
 	split := strings.Split(input, "u")
 
-	runes := []rune(ipa)
 	output := ""
 
 	i := 0
-	for _, a := range runes {
+	for _, a := range ipa {
 		if a == 'u' {
 			output += split[i] + "u"
 			i++
@@ -189,7 +188,7 @@ func specialU(input string, ipa string) string {
 }
 
 /* Helper function for name-alu */
-func insert_infix(verb []string, infix string, dialect int) (output string) {
+func insert_infix(verb []string, infix string) (output string) {
 	output = ""
 	found_infix := false
 	for j := 0; j < len(verb); j++ {
