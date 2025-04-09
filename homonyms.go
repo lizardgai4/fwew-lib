@@ -791,7 +791,14 @@ func findUniques(affixes [][]string, reverse bool) string {
 		}
 	}
 
-	return uniques.String()
+	output := uniques.String()
+
+	// We don't want something that looks like the lenited version of another thing
+	if output == "faypay" || output == "pepxe" {
+		return ""
+	}
+
+	return output
 }
 
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
@@ -922,6 +929,17 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			results[0] = results[0][1:]
 
 			homoMapQuery, show := QueryHelper(results[0])
+
+			uniqueResults := map[string]bool{}
+
+			// We don't want something that looks like they just lenited the prefix
+			for _, word := range results[0] {
+				uniqueResults[word.Navi] = true
+			}
+
+			if len(uniqueResults) == 1 && strings.HasSuffix(homoMapQuery, " --") {
+				continue
+			}
 
 			// No duplicates
 
@@ -1232,7 +1250,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1244,7 +1262,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 14, 0, true, 100)
+	StageThree(dictCount, 0, 127, 127, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
