@@ -398,19 +398,21 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		}
 		fallthrough
 	case 1:
-		for _, element := range verbPrefixes {
-			// If it has a prefix
-			if strings.HasPrefix(input.word, element) {
-				// remove it
-				newCandidate := candidateDupe(input)
-				newCandidate.word = strings.TrimPrefix(input.word, element)
-				newCandidate.insistPOS = "v."
-				newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
-				deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{}, element, "")
+		if input.insistPOS == "any" || input.insistPOS == "adj." {
+			for _, element := range verbPrefixes {
+				// If it has a prefix
+				if strings.HasPrefix(input.word, element) {
+					// remove it
+					newCandidate := candidateDupe(input)
+					newCandidate.word = strings.TrimPrefix(input.word, element)
+					newCandidate.insistPOS = "v."
+					newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
+					deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{}, element, "")
 
-				// check "tsatan", "tan" and "atan"
-				newCandidate.word = string(get_last_rune(element, 1)) + newCandidate.word
-				deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{}, element, "")
+					// check "tsatan", "tan" and "atan"
+					newCandidate.word = string(get_last_rune(element, 1)) + newCandidate.word
+					deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{}, element, "")
+				}
 			}
 		}
 		fallthrough
