@@ -76,7 +76,7 @@ type Queue struct {
 
 type HomoMapStruct struct {
 	mu      sync.Mutex
-	homoMap map[string]bool
+	homoMap map[string]uint8
 }
 
 var writeLock sync.Mutex
@@ -94,14 +94,17 @@ type FifoQueue interface {
 func (h *HomoMapStruct) Insert(item string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.homoMap[item] = true
+	h.homoMap[item] = uint8(len([]rune(item)))
 }
 
-func (h *HomoMapStruct) Present(item string) bool {
+func (h *HomoMapStruct) Present(item string) uint8 {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	_, ok := h.homoMap[item]
-	return ok
+	a, ok := h.homoMap[item]
+	if !ok {
+		return 0
+	}
+	return a
 }
 
 func (h *HomoMapStruct) Clear() {
@@ -185,7 +188,7 @@ func StageOne() error {
 			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
 		}
 
-		if !first2StageMap.Present(standardizedWord) {
+		if first2StageMap.Present(standardizedWord) == 0 {
 			// If the word appears more than once, record it
 			if entry, ok := dictHash[standardizedWord]; ok {
 				if len(entry) > 1 {
@@ -326,7 +329,7 @@ func StageTwo() error {
 
 	err := runOnFile(func(word Word) error {
 		lower := strings.ToLower(word.Navi)
-		if !first2StageMap.Present(lower) {
+		if first2StageMap.Present(lower) == 0 {
 			standardizedWord := word.Navi
 
 			first2StageMap.Insert(lower)
@@ -372,7 +375,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	}
 
 	// If it's in the range, is it good?
-	if !stage3Map.Present(candidate1) {
+	if stage3Map.Present(candidate1) == 0 {
 		inserted = true
 		(*candidates)[newLength] = append((*candidates)[newLength], candidate1)
 		//totalCandidates++
@@ -391,7 +394,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 		}
 	}
 
-	if !inserted && first2StageMap.Present(candidate1) {
+	if !inserted && first2StageMap.Present(candidate1) != 0 {
 		inserted = true
 	}
 
@@ -400,7 +403,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	}
 
 	// If it's in the range, is it good?
-	if !stage3Map.Present(lenited) {
+	if stage3Map.Present(lenited) == 0 {
 		inserted = true
 		// lenited ones will be sorted to appear later
 		(*candidates)[newLength+1] = append((*candidates)[newLength+1], lenited)
@@ -409,7 +412,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 
 	}
 
-	if !inserted && first2StageMap.Present(lenited) {
+	if !inserted && first2StageMap.Present(lenited) != 0 {
 		inserted = true
 	}
 
@@ -942,17 +945,24 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			}
 
 			// No duplicates
-
-			if !homoMap.Present(homoMapQuery) {
+			lengthInt := homoMap.Present(homoMapQuery)
+			if lengthInt == 0 {
 				homoMap.Insert(homoMapQuery)
 
 				// No duplicates from previous
-				if first2StageMap.Present(strings.ToLower(a)) {
+				if first2StageMap.Present(strings.ToLower(a)) != 0 {
 					continue
 				}
 
 				stringy := "dict " + strconv.Itoa(int(dict.dictNum)) + ": [" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
 
+				err := foundResult(a, stringy, show)
+				if err != nil {
+					fmt.Println("Error writing to file:", err)
+					return
+				}
+			} else if lengthInt > uint8(len([]rune(homoMapQuery))) {
+				stringy := "Race condition!  Dict " + strconv.Itoa(int(dict.dictNum)) + ": [" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
 				err := foundResult(a, stringy, show)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
@@ -1176,9 +1186,9 @@ func homonymSearch() error {
 	defer resultsFile.Close()
 
 	// We'll need this for the previous file
-	homoMap.homoMap = map[string]bool{}
-	first2StageMap.homoMap = map[string]bool{}
-	stage3Map.homoMap = map[string]bool{}
+	homoMap.homoMap = map[string]uint8{}
+	first2StageMap.homoMap = map[string]uint8{}
+	stage3Map.homoMap = map[string]uint8{}
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
@@ -1223,7 +1233,7 @@ func homonymSearch() error {
 				homoMapQuery, _ := QueryHelper(results[0])
 
 				// No duplicates
-				if !homoMap.Present(homoMapQuery) {
+				if homoMap.Present(homoMapQuery) == 0 {
 					homoMap.Insert(homoMapQuery)
 				}
 			}
