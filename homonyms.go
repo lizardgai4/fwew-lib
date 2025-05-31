@@ -91,10 +91,10 @@ type FifoQueue interface {
 	Remove()
 }
 
-func (h *HomoMapStruct) Insert(item string) {
+func (h *HomoMapStruct) Insert(item string, length uint8) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	h.homoMap[item] = uint8(len([]rune(item)))
+	h.homoMap[item] = length
 }
 
 func (h *HomoMapStruct) Present(item string) uint8 {
@@ -332,7 +332,7 @@ func StageTwo() error {
 		if first2StageMap.Present(lower) == 0 {
 			standardizedWord := word.Navi
 
-			first2StageMap.Insert(lower)
+			first2StageMap.Insert(lower, uint8(len([]rune(word.Navi))))
 
 			if len(strings.Split(word.Navi, " ")) == 1 {
 				// If the word can conjugate into something else, record it
@@ -379,7 +379,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 		inserted = true
 		(*candidates)[newLength] = append((*candidates)[newLength], candidate1)
 		//totalCandidates++
-		stage3Map.Insert(candidate1)
+		stage3Map.Insert(candidate1, 1)
 	}
 
 	//Lenited forms, too
@@ -408,7 +408,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 		// lenited ones will be sorted to appear later
 		(*candidates)[newLength+1] = append((*candidates)[newLength+1], lenited)
 		//totalCandidates++
-		stage3Map.Insert(lenited)
+		stage3Map.Insert(lenited, 1)
 
 	}
 
@@ -804,6 +804,22 @@ func findUniques(affixes [][]string, reverse bool) string {
 	return output
 }
 
+func Unlenite(input string) []string {
+	// find out the possible unlenited forms
+	results := []string{}
+	for _, oldPrefix := range unlenitionLetters {
+		// If it has a letter that could have changed for lenition,
+		if strings.HasPrefix(input, oldPrefix) {
+			// put all possibilities in the candidates
+			for _, newPrefix := range unlenition[oldPrefix] {
+				results = append(results, newPrefix+strings.TrimPrefix(input, oldPrefix))
+			}
+			break // We don't want the "ts" to become "txs"
+		}
+	}
+	return results
+}
+
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
 	defer checkWaitGroup.Done()
 	wait := false
@@ -946,8 +962,9 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 			// No duplicates
 			lengthInt := homoMap.Present(homoMapQuery)
+			ourLengthInt := uint8(len([]rune(a)))
 			if lengthInt == 0 {
-				homoMap.Insert(homoMapQuery)
+				homoMap.Insert(homoMapQuery, ourLengthInt)
 
 				// No duplicates from previous
 				if first2StageMap.Present(strings.ToLower(a)) != 0 {
@@ -961,12 +978,35 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 					fmt.Println("Error writing to file:", err)
 					return
 				}
-			} else if lengthInt > uint8(len([]rune(homoMapQuery))) {
-				stringy := "Race condition!  Dict " + strconv.Itoa(int(dict.dictNum)) + ": [" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
-				err := foundResult(a, stringy, show)
-				if err != nil {
-					fmt.Println("Error writing to file:", err)
-					return
+			} else if lengthInt > ourLengthInt {
+				homoMap.Insert(homoMapQuery, ourLengthInt)
+
+				// Make sure it's not simply the lenited form of this homonym
+				unlenite := Unlenite(a)
+				if len(unlenite) < 2 {
+					continue
+				}
+
+				isLenited := false
+				for _, unlenited := range unlenite[1:] {
+					results, _ := TranslateFromNaviHash(dict, unlenited, true)
+					results[0] = results[0][1:]
+					if len(results) < 1 {
+						continue
+					}
+					homoMapQuery2, _ := QueryHelper(results[0])
+
+					if homoMapQuery == homoMapQuery2 {
+						isLenited = true
+					}
+				}
+				if !isLenited {
+					stringy := "Race condition!  Dict " + strconv.Itoa(int(dict.dictNum)) + ": [" + a + " " + results[0][0].Navi + "] [" + homoMapQuery
+					err := foundResult(a, stringy, show)
+					if err != nil {
+						fmt.Println("Error writing to file:", err)
+						return
+					}
 				}
 			}
 		}
@@ -1009,7 +1049,7 @@ func foundResult(conjugation string, homonymfo string, show bool) error {
 	lowercase := strings.ToLower(conjugation)
 	_, err2 := previous.WriteString(lowercase + "\n")
 
-	first2StageMap.Insert(lowercase)
+	first2StageMap.Insert(lowercase, 1)
 
 	return err2
 }
@@ -1203,7 +1243,7 @@ func homonymSearch() error {
 		scanner := bufio.NewScanner(b)
 		// This will not read lines over 64k long, but works for Na'vi words just fine
 		for scanner.Scan() {
-			first2StageMap.Insert(scanner.Text())
+			first2StageMap.Insert(scanner.Text(), 1)
 			allWords = append(allWords, scanner.Text())
 		}
 
@@ -1234,7 +1274,7 @@ func homonymSearch() error {
 
 				// No duplicates
 				if homoMap.Present(homoMapQuery) == 0 {
-					homoMap.Insert(homoMapQuery)
+					homoMap.Insert(homoMapQuery, uint8(len([]rune(word))))
 				}
 			}
 			a.WriteString(word + "\n")
@@ -1260,7 +1300,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(4)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
