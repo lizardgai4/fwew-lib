@@ -1275,6 +1275,8 @@ func homonymSearch() error {
 				// No duplicates
 				if homoMap.Present(homoMapQuery) == 0 {
 					homoMap.Insert(homoMapQuery, uint8(len([]rune(word))))
+				} else if homoMap.Present(homoMapQuery) > uint8(len([]rune(word))) {
+					homoMap.Insert(homoMapQuery, uint8(len([]rune(word))))
 				}
 			}
 			a.WriteString(word + "\n")
@@ -1300,7 +1302,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(8)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
