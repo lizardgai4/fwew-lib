@@ -462,15 +462,56 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 			if strings.HasSuffix(element, string(inputNavi[0])) {
 				// regardless of whether or not it's found
 				newWord := element + strings.TrimPrefix(inputNavi, string(inputNavi[0]))
-				reconjugateNouns(candidates, input, newWord, 4, suffixCheck, 0, affixCountdown-1)
+				reconjugateNouns(candidates, input, newWord, 3, suffixCheck, 0, affixCountdown-1)
 			} else {
 				// regardless of whether or not it's found
 				newWord := element + inputNavi
-				reconjugateNouns(candidates, input, newWord, 4, suffixCheck, 0, affixCountdown-1)
+				reconjugateNouns(candidates, input, newWord, 3, suffixCheck, 0, affixCountdown-1)
 			}
 		}
+
+		lenited := inputNavi
+
+		if unlenite == 0 {
+			for _, a := range lenitors {
+				if strings.HasPrefix(lenited, a) {
+					lenited = strings.TrimPrefix(lenited, a)
+					lenited = lenitionMap[a] + lenited
+					break
+				}
+			}
+		}
+
+		for _, element := range prefixes1NounsLenition {
+			// If it has a lenition-causing prefix
+			if strings.HasSuffix(element, string(lenited[0])) {
+				// regardless of whether or not it's found
+				lenited2 := element + strings.TrimPrefix(lenited, string(lenited[0]))
+				reconjugateNouns(candidates, input, lenited2, 5, suffixCheck, -1, affixCountdown-1)
+			} else {
+				// regardless of whether or not it's found
+				lenited2 := element + lenited
+				reconjugateNouns(candidates, input, lenited2, 5, suffixCheck, -1, affixCountdown-1)
+			}
+		}
+
+		if strings.HasSuffix("pe", string(lenited[0])) {
+			// regardless of whether or not it's found
+			lenited2 := "pe" + strings.TrimPrefix(lenited, string(lenited[0]))
+			reconjugateNouns(candidates, input, lenited2, 3, suffixCheck, -1, affixCountdown-1)
+		} else {
+			// regardless of whether or not it's found
+			lenited2 := "pe" + lenited
+			reconjugateNouns(candidates, input, lenited2, 3, suffixCheck, -1, affixCountdown-1)
+		}
+
 		fallthrough
 	case 3:
+		newWord := "fra" + inputNavi
+		reconjugateNouns(candidates, input, newWord, 4, suffixCheck, 0, affixCountdown-1)
+
+		fallthrough
+	case 4:
 		// This one will demand this makes it use lenition
 		lenited := inputNavi
 		if unlenite == 0 {
@@ -483,20 +524,21 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 			}
 		}
 
-		for _, element := range append(prefixes1lenition, "tsay") {
+		for _, element := range prefixes1lenition {
 			// If it has a lenition-causing prefix
 			if strings.HasSuffix(element, string(lenited[0])) {
 				// regardless of whether or not it's found
 				lenited2 := element + strings.TrimPrefix(lenited, string(lenited[0]))
-				reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
+				reconjugateNouns(candidates, input, lenited2, 5, suffixCheck, -1, affixCountdown-1)
 			} else {
 				// regardless of whether or not it's found
 				lenited2 := element + lenited
-				reconjugateNouns(candidates, input, lenited2, 4, suffixCheck, -1, affixCountdown-1)
+				reconjugateNouns(candidates, input, lenited2, 5, suffixCheck, -1, affixCountdown-1)
 			}
 		}
+
 		fallthrough
-	case 4:
+	case 5:
 		//fallthrough
 	}
 
@@ -1303,7 +1345,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(8)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1315,7 +1357,7 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
 	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 127, 127, 1800, true, 100)
+	StageThree(dictCount, 0, 4, 11, 0, true, 100)
 	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 
 	return nil
