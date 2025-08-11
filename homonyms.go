@@ -50,6 +50,7 @@ var changePOS = map[string]bool{
 	"ketsuk": true, //un[verb]able
 	"us":     true, //[verb]ing (active participle only)
 	"awn":    true, //[verb]ed (passive participle only)
+	"tseng":  true, //[verb]place
 }
 
 var resultsFile *os.File
@@ -731,6 +732,7 @@ func reconjugate(pigeonhole *[][]string, word Word, allowPrefixes bool, affixLim
 		// Ability to [verb]
 		reconjugateNouns(pigeonhole, word, word.Navi+"tswo", 0, 0, 0, affixLimit-1)
 		reconjugateNouns(pigeonhole, word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
+		reconjugateNouns(pigeonhole, word, word.Navi+"tseng", 0, 0, 0, affixLimit-1)
 
 	} else if word.PartOfSpeech == "adj." {
 		addToCandidates(pigeonhole, word.Navi+"a")
