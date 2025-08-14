@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -818,7 +819,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					newCandidate.insistPOS = "v."
 
 					newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
-					deconjugateHelper(newCandidate, dupes, candidates, 10, 10, unlenite, []string{}, "", oldSuffix) // Don't allow any other prefixes
+					deconjugateHelper(newCandidate, dupes, candidates, 10, 10, unlenite, []string{"", "", ""}, "", oldSuffix) // Don't allow any other prefixes
 					// They may turn the insistPOS back into a noun
 
 					if oldSuffix == "yu" && strings.HasSuffix(newString, "si") {
@@ -908,7 +909,13 @@ func deconjugate(input string) []ConjugationCandidate {
 
 func TestDeconjugations(searchNaviWord string) (results []Word) {
 	conjugations := deconjugate(searchNaviWord)
+	if searchNaviWord == "leykekyu" {
+		fmt.Println("hi")
+	}
 	for _, candidate := range conjugations {
+		if candidate.word == "lek" {
+			fmt.Println("hi")
+		}
 		a := strings.ReplaceAll(candidate.word, "ù", "u")
 		standardizedWordArray := dialectCrunch(strings.Split(a, " "), false)
 		a = ""
@@ -1078,6 +1085,13 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							}
 						}
 
+						// Assuming v<äp>erb-yu is productive
+						if len(candidate.infixes) == 1 {
+							if candidate.infixes[0] == "äp" || candidate.infixes[0] == "eyk" {
+								infixBan = false
+							}
+						}
+
 						looseTì := false
 						tsuk := false
 
@@ -1107,6 +1121,13 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 								if infixBan || doubleBan || looseTì {
 									break
 								}
+							}
+						}
+
+						// Assuming v<äp>erb-yu is productive
+						if len(candidate.infixes) == 1 {
+							if candidate.infixes[0] == "äp" || candidate.infixes[0] == "eyk" {
+								infixBan = false
 							}
 						}
 
@@ -1202,6 +1223,14 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						}
 						if er && strings.Contains(rebuiltVerb, "errr") {
 							rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "errr", "er")
+						}
+
+						for _, suffix := range candidate.suffixes {
+							if suffix == "yu" {
+
+								rebuiltVerb += "yu"
+								break
+							}
 						}
 
 						//rebuiltVerbForest := rebuiltVerb
