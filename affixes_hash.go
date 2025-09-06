@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -60,6 +59,24 @@ var prefixes1NounsLenition = []string{"pay", "fay"}
 var prefixes1lenition = []string{"ay", "me", "pxe"}
 var stemPrefixes = []string{"fne", "sna", "munsna"}
 var verbPrefixes = []string{"tsuk", "ketsuk"}
+var caseEndings = map[string]bool{
+	"ìl":  true,
+	"l":   true,
+	"it":  true,
+	"ti":  true,
+	"t":   true,
+	"ur":  true,
+	"ru":  true,
+	"r":   true,
+	"yä":  true,
+	"ä":   true,
+	"ìri": true,
+	"ri":  true,
+	"ye":  true,
+	"e":   true,
+	"il":  true,
+	"iri": true,
+}
 
 var adposuffixes = []string{
 	// adpositions that can be mistaken for case endings
@@ -208,6 +225,121 @@ func verifyInfix(existing []string, new string) (bool, []string) {
 	}
 
 	return false, existing
+}
+
+func verifyCaseEnding(noun string, ending string) bool {
+	// error prevention
+	if len(noun) == 0 {
+		return false
+	}
+
+	if get_last_rune(noun, 1) == 'i' && (ending == "ä" || ending == "e") {
+		//soaiä, tìftiä
+		return true
+	}
+	// Don't check adpositions
+	if _, ok := caseEndings[ending]; !ok {
+		return true
+	}
+	// Non-standard conjugations
+	if noun == "omatikaya" && ending == "ä" {
+		return true
+	}
+	diphthongs := map[string]bool{
+		"ay": true,
+		"aw": true,
+		"ey": true,
+		"ew": true,
+	}
+	vowels := map[string]bool{
+		"a": true,
+		"ä": true,
+		"e": true,
+		"i": true,
+		"ì": true,
+		"o": true,
+		"u": true,
+		"ù": true,
+	}
+	nounEnding := ""
+	if len(noun) >= 2 {
+		nounEnding = noun[len(noun)-2:]
+	}
+	if _, ok := diphthongs[nounEnding]; ok {
+		nounEnding := noun[len(noun)-2:]
+		//ewur isn't valid
+		if nounEnding == "ew" && ending == "ur" {
+			return false
+		}
+		// Diphthong
+		diphthongEndings := map[string]bool{
+			"ìl": true,
+			"ti": true,
+			"it": true,
+			"ru": true,
+			"ur": true,
+			"ä":  true,
+			"e":  true,
+			"ri": true,
+		}
+		if _, ok := diphthongEndings[ending]; ok {
+			return true
+		} else {
+			lastRune := get_last_rune(noun, 1)
+			switch lastRune {
+			case 'y':
+				// ayt, eyt
+				if ending == "t" {
+					return true
+				}
+			case 'w':
+				// ewr, awr
+				if ending == "r" {
+					return true
+				}
+			}
+		}
+	} else if _, ok := vowels[string(get_last_rune(noun, 1))]; ok {
+		lastVowel := get_last_rune(noun, 1)
+		if lastVowel == 'u' || lastVowel == 'o' {
+			// No oyä or ayä
+			if ending == "yä" || ending == "ye" {
+				return false
+			}
+		}
+		vowelEndings := map[string]bool{
+			"l":  true,
+			"t":  true,
+			"ti": true,
+			"ru": true,
+			"r":  true,
+			"yä": true,
+			"ye": true,
+			"ri": true,
+		}
+		if _, ok := vowelEndings[ending]; ok {
+			return true
+		}
+	} else {
+		// Consonant or psuedovowel
+		otherEndings := map[string]bool{
+			"ìl":  true,
+			"ti":  true,
+			"it":  true,
+			"ur":  true,
+			"ä":   true,
+			"e":   true,
+			"ìri": true,
+		}
+		if _, ok := otherEndings[ending]; ok {
+			return true
+		}
+		//'ri
+		if get_last_rune(noun, 1) == '\'' && ending == "ru" {
+			return true
+		}
+	}
+	return false
 }
 
 func deconjugateHelper(input ConjugationCandidate, dupes *map[string]ConjugationCandidate, candidates *[]ConjugationCandidate, prefixCheck int, suffixCheck int, unlenite int8, checkInfixes []string, lastPrefix string, lastSuffix string) []ConjugationCandidate {
@@ -670,6 +802,11 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				if strings.HasSuffix(input.word, oldSuffix) {
 					newString = strings.TrimSuffix(input.word, oldSuffix)
 
+					// Make sure you're using a valid case ending
+					if !verifyCaseEnding(newString, oldSuffix) {
+						continue
+					}
+
 					newCandidate := candidateDupe(input)
 					newCandidate.word = newString
 					newCandidate.insistPOS = "n."
@@ -909,13 +1046,7 @@ func deconjugate(input string) []ConjugationCandidate {
 
 func TestDeconjugations(searchNaviWord string) (results []Word) {
 	conjugations := deconjugate(searchNaviWord)
-	if searchNaviWord == "leykekyu" {
-		fmt.Println("hi")
-	}
 	for _, candidate := range conjugations {
-		if candidate.word == "lek" {
-			fmt.Println("hi")
-		}
 		a := strings.ReplaceAll(candidate.word, "ù", "u")
 		standardizedWordArray := dialectCrunch(strings.Split(a, " "), false)
 		a = ""
