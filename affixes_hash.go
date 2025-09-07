@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"strings"
 )
 
@@ -99,6 +100,14 @@ var adposuffixes = []string{
 	"ftu", "hu", //-u
 	"pximaw", "maw", "pxaw", "few", "raw", //-w
 	"vay", "kay", //-y
+}
+
+var lenitionAdposition = map[string]string{
+	"pel":   "pxel",
+	"kamlä": "kxamlä",
+	"kamle": "kxamle",
+	"pisre": "pxisre",
+	"pimaw": "pximaw",
 }
 
 var vowelSuffixes = map[string][]string{
@@ -357,12 +366,48 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		newCandidate := candidateDupe(input)
 		newCandidate.word = newCandidate.word + string(suffixRunes[0])
 		deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+
+		// txeppxel is pronounced txepel, so account for that
+		if slices.Contains([]rune{'p', 't', 'k'}, suffixRunes[0]) {
+			shortUnlenition := map[rune]string{
+				'p': "px",
+				't': "tx",
+				'k': "kx",
+			}
+			newCandidate := candidateDupe(input)
+			newCandidate.word = newCandidate.word + string(shortUnlenition[suffixRunes[0]])
+			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+		}
+
+		// Ejectives before nasals are softened, so tokxmì is pronounced tokmì
+		if !is_vowel(suffixRunes[0]) {
+			unvoicedPlosives := []string{"p", "t", "k"}
+			for _, plosive := range unvoicedPlosives {
+				if strings.HasSuffix(input.word, plosive) {
+					newCandidate := candidateDupe(input)
+					newCandidate.word = newCandidate.word + "x"
+					deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+				}
+			}
+		}
 	}
 	prefixRunes := []rune(lastPrefix)
 	if len(prefixRunes) > 1 && !is_vowel(prefixRunes[len(prefixRunes)-1]) {
 		newCandidate := candidateDupe(input)
 		newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
 		deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+
+		// tsukkxìm
+		if slices.Contains([]rune{'p', 't', 'k'}, prefixRunes[len(prefixRunes)-1]) {
+			shortUnlenition := map[rune]string{
+				'p': "px",
+				't': "tx",
+				'k': "kx",
+			}
+			newCandidate := candidateDupe(input)
+			newCandidate.word = string(shortUnlenition[prefixRunes[len(prefixRunes)-1]]) + newCandidate.word
+			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+		}
 	}
 
 	// fneu checking for fne-'u
@@ -797,6 +842,21 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		fallthrough
 	case 1:
 		if input.insistPOS == "any" || input.insistPOS == "n." {
+			for oldSuffix, actual := range lenitionAdposition {
+				if strings.HasSuffix(input.word, oldSuffix) {
+					newString = strings.TrimSuffix(input.word, oldSuffix)
+
+					newCandidate := candidateDupe(input)
+					newCandidate.word = newString + actual[:2]
+					newCandidate.insistPOS = "n."
+					newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, actual)
+					// all set to 2 to avoid mengeyä -> mengo -> me + 'eng + o
+					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", actual)
+
+					newCandidate.word = newString + actual[:1]
+					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", actual)
+				}
+			}
 			for _, oldSuffix := range adposuffixes {
 				// If it has one of them,
 				if strings.HasSuffix(input.word, oldSuffix) {

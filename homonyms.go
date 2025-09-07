@@ -622,6 +622,12 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 					continue
 				}
 			}
+
+			// Tokxmì is pronounced tokmì, and there's something that accounts for this in affixes_hash
+			if strings.HasSuffix(inputNavi, "x") && !is_vowel([]rune(element)[0]) {
+				newWord := strings.TrimSuffix(inputNavi, "x") + element
+				reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
+			}
 			newWord := inputNavi + element
 			reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
 		}
@@ -981,7 +987,15 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		}
 
 		// These can clog up the search results
-		if strings.HasSuffix(a, "rofa") || strings.HasSuffix(a, "rofasì") {
+		cloggedSuffixes := []string{"rofa", "rofasì", "tsyìpel", "tsyìpelsì"}
+		clog := false
+		for _, suffix := range cloggedSuffixes {
+			if strings.HasSuffix(a, suffix) {
+				clog = true
+				break
+			}
+		}
+		if clog {
 			continue
 		}
 
@@ -1104,6 +1118,10 @@ func addHomsAsync(pigeonhole *[][]string) {
 	low := !inefficiencyWarning
 	lengthy := candidates2.Length()
 
+	p := []string{"p", "px"}
+	t := []string{"t", "tx"}
+	k := []string{"k", "kx"}
+
 	for _, alpha := range *pigeonhole {
 		for _, a := range alpha {
 			if !low && inefficiencyWarning && lengthy == 0 {
@@ -1112,6 +1130,24 @@ func addHomsAsync(pigeonhole *[][]string) {
 				resultsFile.WriteString(waitedString + "\n")
 				low = true
 			}
+
+			// Txeppxel is pronounced txepel, so account for that
+			for _, letter := range p {
+				for _, letter2 := range p {
+					a = strings.ReplaceAll(a, letter+letter2, "p")
+				}
+			}
+			for _, letter := range t {
+				for _, letter2 := range t {
+					a = strings.ReplaceAll(a, letter+letter2, "t")
+				}
+			}
+			for _, letter := range k {
+				for _, letter2 := range k {
+					a = strings.ReplaceAll(a, letter+letter2, "k")
+				}
+			}
+
 			//start2 := time.Now()
 			err3 := candidates2.Insert(a)
 
@@ -1165,6 +1201,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 
 				reconjugateNouns(&pigeonhole, word, siless+"tswo", 0, 0, 0, affixLimit)
 				reconjugateNouns(&pigeonhole, word, siless+"siyu", 0, 0, 0, affixLimit)
+				//reconjugateNouns(&pigeonhole, word, siless+"tseng", 0, 0, 0, affixLimit)
 			}
 
 			addWaitGroup.Wait()
@@ -1247,13 +1284,14 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 
 // Do everything
 func homonymSearch() error {
-	if _, err := os.Stat("results.txt"); err == nil {
+	name := "results-" + time.Now().Format(timeFormat) + ".txt"
+	if _, err := os.Stat(name); err == nil {
 		// path/to/whatever exists
-		fmt.Println("results.txt exists.  Please rename or delete it so it's not overwritten")
+		fmt.Println("Unexpected filename conflict.  Try again.")
 		return err
 	} else if errors.Is(err, os.ErrNotExist) {
 		// path/to/whatever does *not* exist
-		a, err2 := os.Create("results.txt")
+		a, err2 := os.Create(name)
 		if err2 != nil {
 			fmt.Println("error opening file:", err2)
 			return err2
