@@ -768,6 +768,60 @@ func AppendStringAlphabetically(array []string, addition string) []string {
 	return newArray
 }
 
+func pxelFix(affixes [][]string) [][]string {
+
+	tempAffixes := [][]string{}
+
+	foundPel := false
+	foundPxel := false
+
+	for _, a := range affixes {
+		pe := false
+		l := false
+		pxel := false
+		for _, b := range a {
+			switch b {
+			case "pe":
+				pe = true
+			case "l":
+				l = true
+			case "pxel":
+				pxel = true
+			}
+		}
+
+		if pxel {
+			foundPxel = true
+			tempB := []string{}
+			for _, b := range a {
+				if b == "pxel" {
+					continue
+				}
+				tempB = append(tempB, b)
+			}
+			tempAffixes = append(tempAffixes, tempB)
+		} else if pe && l {
+			foundPel = true
+			tempB := []string{}
+			for _, b := range a {
+				if b == "l" || b == "pe" {
+					continue
+				}
+				tempB = append(tempB, b)
+			}
+			tempAffixes = append(tempAffixes, tempB)
+		} else {
+			tempAffixes = append(tempAffixes, a)
+		}
+	}
+
+	if foundPel && foundPxel {
+		return tempAffixes
+	}
+
+	return affixes
+}
+
 // modified from https://www.slingacademy.com/article/how-to-find-common-elements-of-2-slices-in-go/
 func findUniques(affixes [][]string, reverse bool) string {
 	var uniques strings.Builder
@@ -777,6 +831,8 @@ func findUniques(affixes [][]string, reverse bool) string {
 			slices.Reverse(affixes[i])
 		}
 	}
+
+	affixes = pxelFix(affixes)
 
 	all := map[string]bool{}
 	checked := map[string]bool{}
@@ -1285,6 +1341,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int
 // Do everything
 func homonymSearch() error {
 	name := "results-" + time.Now().Format(timeFormat) + ".txt"
+	name = strings.ReplaceAll(name, ":", "-")
 	if _, err := os.Stat(name); err == nil {
 		// path/to/whatever exists
 		fmt.Println("Unexpected filename conflict.  Try again.")
@@ -1385,7 +1442,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(8)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
