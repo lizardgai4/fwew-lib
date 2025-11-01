@@ -1178,11 +1178,20 @@ func addHomsAsync(pigeonhole *[][]string) {
 	p := []string{"p", "px"}
 	t := []string{"t", "tx"}
 	k := []string{"k", "kx"}
+	first := true
 
 	for _, alpha := range *pigeonhole {
 		for _, a := range alpha {
 			if len([]rune(a)) < charMin {
-				continue
+				if !first {
+					continue
+				} else {
+					first = false
+					// We want numbers to get through
+					if _, err := strconv.Atoi(a); err != nil {
+						continue
+					}
+				}
 			}
 
 			if !low && inefficiencyWarning && lengthy == 0 {
@@ -1464,7 +1473,7 @@ func homonymSearch() error {
 	for i := 0; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
-		StageThree(dictCount, 0, 127, i, i + interval, 0, true, 100)
+		StageThree(dictCount, 0, 127, i + 1, i + interval, 0, true, 100)
 		finish_string := "Checked up to " + strconv.Itoa(i + interval) + " characters long\n"
 		fmt.Println(finish_string)
 		resultsFile.WriteString(finish_string)
