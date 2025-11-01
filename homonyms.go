@@ -42,6 +42,7 @@ var longest uint8 = 0
 */
 var totalCandidates int = 0
 var charLimit int = 14
+var charMin int = 0
 var progressInterval int = 100
 var changePOS = map[string]bool{
 	"tswo":   true, // ability to [verb]
@@ -1180,6 +1181,10 @@ func addHomsAsync(pigeonhole *[][]string) {
 
 	for _, alpha := range *pigeonhole {
 		for _, a := range alpha {
+			if len([]rune(a)) < charMin {
+				continue
+			}
+
 			if !low && inefficiencyWarning && lengthy == 0 {
 				waitedString := "Queue reached 0.  This should only happen at the beginning"
 				fmt.Println(waitedString)
@@ -1275,14 +1280,14 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 	return err
 }
 
-func StageThree(dictCount uint8, minAffix int, affixLimit int8, charLimitSet int, startNumber int,
+func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, charLimitSet int, startNumber int,
 	inefficiencyWarningSet bool, progressIntervalSet int) (err error) {
+	finished.finished = false
 
 	inefficiencyWarning = inefficiencyWarningSet
 	charLimit = charLimitSet
+	charMin = charMinSet
 	progressInterval = progressIntervalSet
-
-	start = time.Now()
 
 	resultsFile.WriteString("Stage 3\n")
 
@@ -1442,7 +1447,7 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
-	dictCount := uint8(16)
+	dictCount := uint8(8)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1452,10 +1457,19 @@ func homonymSearch() error {
 	fmt.Println("Stage 2:")
 	StageTwo()
 	fmt.Println("Stage 3:")
-	// number of dictionaries, minimum affixes, maximum affixes, maximum word length, start at word number N
-	// warn about inefficiencies, Progress updates after checking every N number of words
-	StageThree(dictCount, 0, 4, 11, 0, true, 100)
-	// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
+	start = time.Now()
+	
+	stop_at_len := 30
+	interval := 5
+	for i := 0; i < stop_at_len; i += interval {
+		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
+		// warn about inefficiencies, Progress updates after checking every N number of words
+		StageThree(dictCount, 0, 4, i, i + interval, 0, true, 100)
+		finish_string := "Checked up to " + strconv.Itoa(i + interval) + " characters long\n"
+		fmt.Println(finish_string)
+		resultsFile.WriteString(finish_string)
+		// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
+	}
 
 	return nil
 }
