@@ -1464,7 +1464,7 @@ func homonymSearch() error {
 	for i := 0; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
-		StageThree(dictCount, 0, 4, i, i + interval, 0, true, 100)
+		StageThree(dictCount, 0, 127, i, i + interval, 0, true, 100)
 		finish_string := "Checked up to " + strconv.Itoa(i + interval) + " characters long\n"
 		fmt.Println(finish_string)
 		resultsFile.WriteString(finish_string)
