@@ -20,7 +20,8 @@ var candidates2 Queue = *CreateQueue(120000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
-var benchMap = HomoMapStruct{}
+var benchMap = BenchMapStruct{}
+var benchTotal = 0
 var resultCount = 0
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
 var lenitionMap = map[string]string{
@@ -114,6 +115,32 @@ func (h *HomoMapStruct) Clear() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	clear(h.homoMap)
+}
+
+type BenchResult struct {
+	candidate string
+	found     bool
+}
+
+type BenchMapStruct struct {
+	mu      sync.Mutex
+	homoMap map[string]BenchResult
+}
+
+func (h *BenchMapStruct) Insert(item string, length BenchResult) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.homoMap[item] = length
+}
+
+func (h *BenchMapStruct) Present(item string) BenchResult {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	a, ok := h.homoMap[item]
+	if !ok {
+		return BenchResult{candidate: "", found: false}
+	}
+	return a
 }
 
 // Insert inserts the item into the queue
@@ -1076,8 +1103,10 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 				continue
 			}
 
-			if benchMap.Present(homoMapQuery) == 1 {
-				benchMap.Insert(homoMapQuery, 2)
+			bench := benchMap.Present(homoMapQuery)
+			if bench.found == false {
+				bench.found = true
+				benchMap.Insert(homoMapQuery, bench)
 			}
 
 			// No duplicates
@@ -1160,8 +1189,10 @@ func foundResult(conjugation string, homonymfo string, show bool) error {
 	writeLock.Lock()
 	defer writeLock.Unlock()
 	resultCount++
-	if benchMap.Present(homonymfo) == 1 {
-		benchMap.Insert(homonymfo, 2)
+	bench := benchMap.Present(homonymfo)
+	if bench.found == false {
+		bench.found = true
+		benchMap.Insert(homonymfo, bench)
 	}
 	if show {
 		fmt.Println(homonymfo)
@@ -1350,22 +1381,29 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	fmt.Println(checkedString)
 	resultsFile.WriteString(checkedString + "\n")
 
-	any_skipped := false
-	for key, value := range benchMap.homoMap {
-		charCount := len([]rune(key))
+	skipped := 0
+	missed := 0
+	for _, value := range benchMap.homoMap {
+		charCount := len([]rune(value.candidate))
 		if charCount <= charLimit {
-			if value != 2 {
-				missed := "Missed " + key
+			if !value.found {
+				missed += 1
+				missed := "Missed " + value.candidate
 				resultsFile.WriteString(missed)
 				fmt.Println(missed)
 			}
 		} else {
-			any_skipped = true
+			skipped += 1
 		}
 	}
-	if !any_skipped {
+	if skipped == 0 {
 		fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
 		resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones")
+	} else {
+		found := benchTotal - (skipped + missed)
+		found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
+		fmt.Println(found_string)
+		resultsFile.WriteString(found_string)
 	}
 
 	/*fmt.Println(longest)
@@ -1407,7 +1445,7 @@ func homonymSearch() error {
 
 	// We'll need this for the previous file
 	homoMap.homoMap = map[string]uint8{}
-	benchMap.homoMap = map[string]uint8{}
+	benchMap.homoMap = map[string]BenchResult{}
 	first2StageMap.homoMap = map[string]uint8{}
 	stage3Map.homoMap = map[string]uint8{}
 
@@ -1519,8 +1557,9 @@ func homonymSearch() error {
 				homoMapQuery, _ := QueryHelper(results[0])
 
 				// No duplicates
-				if benchMap.Present(homoMapQuery) == 0 {
-					benchMap.Insert(homoMapQuery, 1)
+				if benchMap.Present(homoMapQuery).candidate == "" {
+					benchTotal += 1
+					benchMap.Insert(homoMapQuery, BenchResult{candidate: word, found: false})
 				}
 			}
 
