@@ -1295,6 +1295,19 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 				pigeonhole[0] = append(pigeonhole[0], strconv.Itoa(wordCount))
 			}
 
+			// Lenited version of the base form, too
+			lenited := ""
+			for _, a := range lenitors {
+				if strings.HasPrefix(word.Navi, a) {
+					lenited = strings.TrimPrefix(word.Navi, a)
+					lenited = lenitionMap[a] + lenited
+					break
+				}
+			}
+			if lenited != "" {
+				addToCandidates(&pigeonhole, lenited)
+			}
+
 			// No multiword words
 			if !strings.Contains(word.Navi, " ") {
 
