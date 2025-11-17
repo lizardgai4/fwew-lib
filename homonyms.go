@@ -16,10 +16,11 @@ import (
 )
 
 var homonymsArray = []string{"", "", ""}
-var candidates2 Queue = *CreateQueue(12000)
+var candidates2 Queue = *CreateQueue(120000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
+var benchMap = HomoMapStruct{}
 var resultCount = 0
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
 var lenitionMap = map[string]string{
@@ -741,7 +742,7 @@ func reconjugate(pigeonhole *[][]string, word Word, allowPrefixes bool, affixLim
 		reconjugateNouns(pigeonhole, word, word.Navi+"yu", 0, 0, 0, affixLimit-1)
 		reconjugateNouns(pigeonhole, word, word.Navi+"tseng", 0, 0, 0, affixLimit-1)
 
-	} else if word.PartOfSpeech == "adj." {
+	} else if word.PartOfSpeech == "adj." || word.PartOfSpeech == "num." {
 		addToCandidates(pigeonhole, word.Navi+"a")
 
 		if allowPrefixes {
@@ -1075,6 +1076,10 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 				continue
 			}
 
+			if benchMap.Present(homoMapQuery) == 1 {
+				benchMap.Insert(homoMapQuery, 2)
+			}
+
 			// No duplicates
 			lengthInt := homoMap.Present(homoMapQuery)
 			ourLengthInt := uint8(len([]rune(a)))
@@ -1155,6 +1160,9 @@ func foundResult(conjugation string, homonymfo string, show bool) error {
 	writeLock.Lock()
 	defer writeLock.Unlock()
 	resultCount++
+	if benchMap.Present(homonymfo) == 1 {
+		benchMap.Insert(homonymfo, 2)
+	}
 	if show {
 		fmt.Println(homonymfo)
 		_, err := resultsFile.WriteString(homonymfo + "\n")
@@ -1222,7 +1230,7 @@ func addHomsAsync(pigeonhole *[][]string) {
 			err3 := candidates2.Insert(a)
 
 			if err3 != nil {
-				for candidates2.Length() > 8000 {
+				for candidates2.Length() > 80000 {
 					time.Sleep(time.Millisecond * 5)
 				}
 				candidates2.Insert(a)
@@ -1342,6 +1350,24 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	fmt.Println(checkedString)
 	resultsFile.WriteString(checkedString + "\n")
 
+	any_skipped := false
+	for key, value := range benchMap.homoMap {
+		charCount := len([]rune(key))
+		if charCount <= charLimit {
+			if value != 2 {
+				missed := "Missed " + key
+				resultsFile.WriteString(missed)
+				fmt.Println(missed)
+			}
+		} else {
+			any_skipped = true
+		}
+	}
+	if !any_skipped {
+		fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
+		resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones")
+	}
+
 	/*fmt.Println(longest)
 	resultsFile.WriteString(strconv.Itoa(int(longest)) + "\n")
 	fmt.Println(top10Longest[longest])
@@ -1381,6 +1407,7 @@ func homonymSearch() error {
 
 	// We'll need this for the previous file
 	homoMap.homoMap = map[string]uint8{}
+	benchMap.homoMap = map[string]uint8{}
 	first2StageMap.homoMap = map[string]uint8{}
 	stage3Map.homoMap = map[string]uint8{}
 
@@ -1454,8 +1481,58 @@ func homonymSearch() error {
 		return err
 	}
 
+	// Make sure it detects all the known good ones
+	if _, err := os.Stat("benchmark.txt"); err == nil {
+		// path/to/whatever exists
+		b, err2 := os.Open("benchmark.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
+			return err2
+		}
+
+		allWords := []string{}
+
+		scanner := bufio.NewScanner(b)
+		// This will not read lines over 64k long, but works for Na'vi words just fine
+		for scanner.Scan() {
+			first2StageMap.Insert(scanner.Text(), 1)
+			allWords = append(allWords, scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		sort.Slice(allWords, func(i, j int) bool {
+			return AlphabetizeHelper(allWords[i], allWords[j])
+		})
+
+		ourDict := FwewDictInit(uint8(0))
+		for _, word := range allWords {
+			// Make sure it knows the signatures of the older words so it doesn't duplicate them
+			results, err := TranslateFromNaviHash(ourDict, word, true)
+
+			if err == nil && len(results) > 0 && len(results[0]) > 2 {
+
+				results[0] = results[0][1:]
+
+				homoMapQuery, _ := QueryHelper(results[0])
+
+				// No duplicates
+				if benchMap.Present(homoMapQuery) == 0 {
+					benchMap.Insert(homoMapQuery, 1)
+				}
+			}
+
+		}
+	} else {
+		fmt.Println("benchmark.txt needed")
+		return err
+	}
+
 	defer previous.Close()
 
+	// Number of threads to use as dictionaries
 	dictCount := uint8(8)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
@@ -1467,14 +1544,14 @@ func homonymSearch() error {
 	StageTwo()
 	fmt.Println("Stage 3:")
 	start = time.Now()
-	
-	stop_at_len := 30
+
+	stop_at_len := 50
 	interval := 5
 	for i := 0; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
-		StageThree(dictCount, 0, 127, i + 1, i + interval, 0, true, 100)
-		finish_string := "Checked up to " + strconv.Itoa(i + interval) + " characters long\n"
+		StageThree(dictCount, 0, 127, i+1, i+interval, 0, true, 100)
+		finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
 		fmt.Println(finish_string)
 		resultsFile.WriteString(finish_string)
 		// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
