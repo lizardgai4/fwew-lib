@@ -1190,7 +1190,7 @@ func foundResult(conjugation string, homonymfo string, show bool) error {
 	defer writeLock.Unlock()
 	resultCount++
 	bench := benchMap.Present(homonymfo)
-	if bench.found == false {
+	if !bench.found {
 		bench.found = true
 		benchMap.Insert(homonymfo, bench)
 	}
@@ -1402,14 +1402,14 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 			if !value.found {
 				missed += 1
 				missed := "Missed " + value.candidate
-				resultsFile.WriteString(missed)
+				resultsFile.WriteString(missed + "\n")
 				fmt.Println(missed)
 			}
 		} else {
 			skipped += 1
 		}
 	}
-	if skipped == 0 {
+	if skipped == 0 && missed == 0 {
 		fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
 		resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones")
 	} else {
