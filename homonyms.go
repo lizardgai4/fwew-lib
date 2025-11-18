@@ -1412,7 +1412,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	}
 	if skipped == 0 && missed == 0 {
 		fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
-		resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones")
+		resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones\n")
 	} else {
 		found := benchTotal - (skipped + missed)
 		found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
@@ -1586,7 +1586,7 @@ func homonymSearch() error {
 	defer previous.Close()
 
 	// Number of threads to use as dictionaries
-	dictCount := uint8(8)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
