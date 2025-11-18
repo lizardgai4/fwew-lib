@@ -395,21 +395,20 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	newLength := len([]rune(candidate1))
 	inserted := false
 	// Is it longer than the words we want to check?
-	if newLength > charLimit {
-		return false
-	}
+	if newLength <= charLimit {
+		// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
+		if strings.HasSuffix(candidate1, "pe") {
+			newLength--
+		}
 
-	// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
-	if strings.HasSuffix(candidate1, "pe") {
-		newLength--
-	}
-
-	// If it's in the range, is it good?
-	if stage3Map.Present(candidate1) == 0 {
+		// If it's in the range, is it good?
+		if stage3Map.Present(candidate1) == 0 {
+			inserted = true
+			(*candidates)[newLength] = append((*candidates)[newLength], candidate1)
+			//totalCandidates++
+			stage3Map.Insert(candidate1, 1)
+		}
 		inserted = true
-		(*candidates)[newLength] = append((*candidates)[newLength], candidate1)
-		//totalCandidates++
-		stage3Map.Insert(candidate1, 1)
 	}
 
 	//Lenited forms, too
@@ -432,18 +431,20 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 		return inserted
 	}
 
-	// If it's in the range, is it good?
-	if stage3Map.Present(lenited) == 0 {
-		inserted = true
-		// lenited ones will be sorted to appear later
-		(*candidates)[newLength+1] = append((*candidates)[newLength+1], lenited)
-		//totalCandidates++
-		stage3Map.Insert(lenited, 1)
+	lenitedLength := len([]rune(lenited))
+	if lenitedLength <= charLimit {
+		// If it's in the range, is it good?
+		if stage3Map.Present(lenited) == 0 {
+			inserted = true
+			// lenited ones will be sorted to appear later
+			(*candidates)[lenitedLength+1] = append((*candidates)[lenitedLength+1], lenited)
+			//totalCandidates++
+			stage3Map.Insert(lenited, 1)
+		}
 
-	}
-
-	if !inserted && first2StageMap.Present(lenited) != 0 {
-		inserted = true
+		if !inserted && first2StageMap.Present(lenited) != 0 {
+			inserted = true
+		}
 	}
 
 	return inserted
@@ -458,12 +459,12 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 
 	runeLen := len([]rune(inputNavi))
 
+	inserted := true
+	inserted = addToCandidates(candidates, inputNavi)
+
 	if runeLen > charLimit {
 		return nil
 	}
-
-	inserted := true
-	inserted = addToCandidates(candidates, inputNavi)
 
 	// Do not reconstruct things based on things we already reconstructed
 	if !inserted {
@@ -1598,7 +1599,7 @@ func homonymSearch() error {
 	start = time.Now()
 
 	stop_at_len := 50
-	interval := 5
+	interval := 1
 	for i := 0; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
