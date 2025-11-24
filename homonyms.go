@@ -997,8 +997,8 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		wordNumber, err1 := strconv.Atoi(a)
 
 		if err1 == nil {
-			// Show at most every 10 seconds.  Don't spam
-			if time.Since(secondSecondWait).Seconds() >= 10.0 && wordNumber%progressInterval == 0 {
+			// Show at most every 30 seconds.  Don't spam
+			if time.Since(secondSecondWait).Seconds() >= 30.0 && wordNumber%progressInterval == 0 {
 				secondSecondWait = time.Now()
 				total_seconds := time.Since(start)
 
@@ -1382,7 +1382,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 
 	checkWaitGroup.Wait()
 
-	if time.Since(secondWait) >= 10 {
+	if time.Since(secondWait) >= 30.0 {
 		fmt.Println("All dictionaries finished")
 		resultsFile.WriteString("All dictionaries finished\n")
 
@@ -1399,8 +1399,8 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		fmt.Println(finalString)
 		resultsFile.WriteString(finalString + "\n")
 
-		// Only show if it took at least 10 seconds.  Don't spam
-		if time.Since(secondWait).Seconds() >= 10 {
+		// Only show if it took at least 30 seconds.  Don't spam
+		if time.Since(secondWait).Seconds() >= 30.0 {
 			checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
 			fmt.Println(checkedString)
 			resultsFile.WriteString(checkedString + "\n")
