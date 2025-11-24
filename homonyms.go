@@ -66,6 +66,7 @@ var finished = queueFinished{false, sync.Mutex{}}
 var finishedSentinelValue = "lu hasey srak?"
 var wordCount = 0
 var dictArray = []*FwewDict{}
+var minWait = 30.0
 
 var secondWait = time.Now()
 var secondSecondWait = time.Now()
@@ -219,6 +220,10 @@ func StageOne() error {
 
 		if strings.Contains(standardizedWord, "é") {
 			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
+		}
+
+		if standardizedWord == "lok" {
+			print("hi")
 		}
 
 		if first2StageMap.Present(standardizedWord) == 0 {
@@ -998,7 +1003,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		if err1 == nil {
 			// Show at most every 30 seconds.  Don't spam
-			if time.Since(secondSecondWait).Seconds() >= 30.0 && wordNumber%progressInterval == 0 {
+			if time.Since(secondSecondWait).Seconds() >= minWait && wordNumber%progressInterval == 0 {
 				secondSecondWait = time.Now()
 				total_seconds := time.Since(start)
 
@@ -1341,8 +1346,10 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 	})
 
 	candidates2.Insert(finishedSentinelValue)
-	fmt.Println("Finished making word candidates")
-	resultsFile.WriteString("Finished making word candidates\n")
+	if time.Since(secondWait).Seconds() >= minWait {
+		fmt.Println("Finished making word candidates")
+		resultsFile.WriteString("Finished making word candidates\n")
+	}
 
 	return err
 }
@@ -1382,7 +1389,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 
 	checkWaitGroup.Wait()
 
-	if time.Since(secondWait) >= 30.0 {
+	if time.Since(secondWait).Seconds() >= minWait {
 		fmt.Println("All dictionaries finished")
 		resultsFile.WriteString("All dictionaries finished\n")
 
@@ -1400,7 +1407,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		resultsFile.WriteString(finalString + "\n")
 
 		// Only show if it took at least 30 seconds.  Don't spam
-		if time.Since(secondWait).Seconds() >= 30.0 {
+		if time.Since(secondWait).Seconds() >= minWait {
 			checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
 			fmt.Println(checkedString)
 			resultsFile.WriteString(checkedString + "\n")
@@ -1617,9 +1624,12 @@ func homonymSearch() error {
 		// warn about inefficiencies, Progress updates after checking every N number of words
 		secondWait = time.Now()
 		StageThree(dictCount, 0, 127, i+1, i+interval, 0, false, 100)
-		finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
-		fmt.Println(finish_string)
-		resultsFile.WriteString(finish_string)
+		if time.Since(secondWait).Seconds() >= minWait {
+			finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
+			fmt.Println(finish_string)
+			resultsFile.WriteString(finish_string)
+		}
+
 		// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 	}
 
