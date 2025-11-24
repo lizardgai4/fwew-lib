@@ -67,6 +67,9 @@ var finishedSentinelValue = "lu hasey srak?"
 var wordCount = 0
 var dictArray = []*FwewDict{}
 
+var secondWait = time.Now()
+var secondSecondWait = time.Now()
+
 type queueFinished struct {
 	finished bool
 	mu       sync.Mutex
@@ -994,7 +997,9 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		wordNumber, err1 := strconv.Atoi(a)
 
 		if err1 == nil {
-			if wordNumber%progressInterval == 0 {
+			// Show at most every 10 seconds.  Don't spam
+			if time.Since(secondSecondWait).Seconds() >= 10.0 && wordNumber%progressInterval == 0 {
+				secondSecondWait = time.Now()
 				total_seconds := time.Since(start)
 
 				now := time.Now().Format(timeFormat)
@@ -1180,10 +1185,10 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		}*/
 	}
 
-	printMessage := "Dictionary " + strconv.Itoa(int(dict.dictNum)) + " finished"
+	/*printMessage := "Dictionary " + strconv.Itoa(int(dict.dictNum)) + " finished"
 
 	fmt.Println(printMessage)
-	resultsFile.WriteString(printMessage + "\n")
+	resultsFile.WriteString(printMessage + "\n")*/
 }
 
 func foundResult(conjugation string, homonymfo string, show bool) error {
@@ -1346,6 +1351,8 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	inefficiencyWarningSet bool, progressIntervalSet int) (err error) {
 	finished.finished = false
 
+	secondSecondWait = secondWait
+
 	inefficiencyWarning = inefficiencyWarningSet
 	charLimit = charLimitSet
 	charMin = charMinSet
@@ -1375,49 +1382,54 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 
 	checkWaitGroup.Wait()
 
-	fmt.Println("All dictionaries finished")
-	resultsFile.WriteString("All dictionaries finished\n")
+	if time.Since(secondWait) >= 10 {
+		fmt.Println("All dictionaries finished")
+		resultsFile.WriteString("All dictionaries finished\n")
 
-	//fmt.Println(homoMap)
-	//fmt.Println(tempHoms)
+		//fmt.Println(homoMap)
+		//fmt.Println(tempHoms)
 
-	total_seconds := time.Since(start)
+		total_seconds := time.Since(start)
 
-	now := time.Now().Format(timeFormat)
+		now := time.Now().Format(timeFormat)
 
-	finalString := now + " Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
-		strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
-		strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds"
-	fmt.Println(finalString)
-	resultsFile.WriteString(finalString + "\n")
+		finalString := now + " Stage three took " + strconv.Itoa(int(math.Floor(total_seconds.Hours()))) + " hours, " +
+			strconv.Itoa(int(math.Floor(total_seconds.Minutes()))%60) + " minutes and " +
+			strconv.Itoa(int(total_seconds.Seconds())%60) + " seconds"
+		fmt.Println(finalString)
+		resultsFile.WriteString(finalString + "\n")
 
-	checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
-	fmt.Println(checkedString)
-	resultsFile.WriteString(checkedString + "\n")
+		// Only show if it took at least 10 seconds.  Don't spam
+		if time.Since(secondWait).Seconds() >= 10 {
+			checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
+			fmt.Println(checkedString)
+			resultsFile.WriteString(checkedString + "\n")
 
-	skipped := 0
-	missed := 0
-	for _, value := range benchMap.homoMap {
-		charCount := len([]rune(value.candidate))
-		if charCount <= charLimit {
-			if !value.found {
-				missed += 1
-				missed := "Missed " + value.candidate
-				resultsFile.WriteString(missed + "\n")
-				fmt.Println(missed)
+			skipped := 0
+			missed := 0
+			for _, value := range benchMap.homoMap {
+				charCount := len([]rune(value.candidate))
+				if charCount <= charLimit {
+					if !value.found {
+						missed += 1
+						missed := "Missed " + value.candidate
+						resultsFile.WriteString(missed + "\n")
+						fmt.Println(missed)
+					}
+				} else {
+					skipped += 1
+				}
 			}
-		} else {
-			skipped += 1
+			if skipped == 0 && missed == 0 {
+				fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
+				resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones\n")
+			} else {
+				found := benchTotal - (skipped + missed)
+				found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
+				fmt.Println(found_string)
+				resultsFile.WriteString(found_string)
+			}
 		}
-	}
-	if skipped == 0 && missed == 0 {
-		fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
-		resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones\n")
-	} else {
-		found := benchTotal - (skipped + missed)
-		found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
-		fmt.Println(found_string)
-		resultsFile.WriteString(found_string)
 	}
 
 	/*fmt.Println(longest)
@@ -1603,7 +1615,8 @@ func homonymSearch() error {
 	for i := 0; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
-		StageThree(dictCount, 0, 127, i+1, i+interval, 0, true, 100)
+		secondWait = time.Now()
+		StageThree(dictCount, 0, 127, i+1, i+interval, 0, false, 100)
 		finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
 		fmt.Println(finish_string)
 		resultsFile.WriteString(finish_string)
