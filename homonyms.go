@@ -222,11 +222,18 @@ func StageOne() error {
 			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
 		}
 
-		if first2StageMap.Present(standardizedWord) == 0 {
-			// If the word appears more than once, record it
-			if entry, ok := dictHash[standardizedWord]; ok {
-				if len(entry) > 1 {
-					query, _ := QueryHelper(entry)
+		crunched := dialectCrunch([]string{standardizedWord}, true)[0]
+
+		// If the word appears more than once, record it
+		if entry, ok := dictHash[crunched]; ok {
+			if len(entry) > 1 {
+				query, _ := QueryHelper(entry)
+				bench := benchMap.Present(query)
+				if !bench.found {
+					bench.found = true
+					benchMap.Insert(query, bench)
+				}
+				if first2StageMap.Present(standardizedWord) == 0 {
 					foundResult(standardizedWord, query, true)
 				}
 			}
@@ -1372,8 +1379,9 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		return errors.New("progress interval must be 1 or greater")
 	}
 
-	resultsFile.WriteString(strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits\n")
-	fmt.Println(strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits")
+	message := strconv.Itoa(int(time.Since(start).Seconds())) + " seconds.  " + strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits"
+	resultsFile.WriteString(message + "\n")
+	fmt.Println(message)
 
 	makeWaitGroup.Add(1)
 	go makeHomsAsync(affixLimit, startNumber)
@@ -1563,8 +1571,9 @@ func homonymSearch() error {
 		scanner := bufio.NewScanner(b)
 		// This will not read lines over 64k long, but works for Na'vi words just fine
 		for scanner.Scan() {
-			first2StageMap.Insert(scanner.Text(), 1)
-			allWords = append(allWords, scanner.Text())
+			thisWord := strings.ToLower(scanner.Text())
+			first2StageMap.Insert(thisWord, 1)
+			allWords = append(allWords, thisWord)
 		}
 
 		if err := scanner.Err(); err != nil {
