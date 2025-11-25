@@ -222,10 +222,6 @@ func StageOne() error {
 			standardizedWord = strings.ReplaceAll(standardizedWord, "é", "e")
 		}
 
-		if standardizedWord == "lok" {
-			print("hi")
-		}
-
 		if first2StageMap.Present(standardizedWord) == 0 {
 			// If the word appears more than once, record it
 			if entry, ok := dictHash[standardizedWord]; ok {
@@ -404,15 +400,16 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	inserted := false
 	// Is it longer than the words we want to check?
 	if newLength <= charLimit {
+		ourBox := 1
 		// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
 		if strings.HasSuffix(candidate1, "pe") {
-			newLength--
+			ourBox = 0
 		}
 
 		// If it's in the range, is it good?
 		if stage3Map.Present(candidate1) == 0 {
 			inserted = true
-			(*candidates)[newLength] = append((*candidates)[newLength], candidate1)
+			(*candidates)[ourBox] = append((*candidates)[ourBox], candidate1)
 			//totalCandidates++
 			stage3Map.Insert(candidate1, 1)
 		}
@@ -445,7 +442,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 		if stage3Map.Present(lenited) == 0 {
 			inserted = true
 			// lenited ones will be sorted to appear later
-			(*candidates)[lenitedLength+1] = append((*candidates)[lenitedLength+1], lenited)
+			(*candidates)[2] = append((*candidates)[2], lenited)
 			//totalCandidates++
 			stage3Map.Insert(lenited, 1)
 		}
@@ -1295,7 +1292,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 			// Reset dupe detector so it's not taking up all the RAM
 			stage3Map.Clear()
 
-			pigeonhole := make([][]string, charLimit+2)
+			pigeonhole := make([][]string, 3)
 
 			pigeonhole[1] = append(pigeonhole[1], word.Navi)
 
