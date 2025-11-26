@@ -1611,7 +1611,7 @@ func homonymSearch() error {
 	defer previous.Close()
 
 	// Number of threads to use as dictionaries
-	dictCount := uint8(8)
+	dictCount := uint8(16)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1625,6 +1625,8 @@ func homonymSearch() error {
 
 	stop_at_len := 50
 	interval := 1
+
+	prevTotal := -1
 	for i := 0; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
@@ -1635,6 +1637,13 @@ func homonymSearch() error {
 			fmt.Println(finish_string)
 			resultsFile.WriteString(finish_string)
 		}
+
+		// Stop if no more candidates are found
+		if totalCandidates == prevTotal {
+			break
+		}
+
+		prevTotal = totalCandidates
 
 		// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 	}
