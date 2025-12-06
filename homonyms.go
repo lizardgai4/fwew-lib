@@ -404,13 +404,14 @@ func StageTwo() error {
 // For StageThree, this adds things to the candidates
 func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	newLength := len([]rune(candidate1))
-	if newLength < charMin-1 {
+	if newLength < charMin {
 		return true
 	}
+
 	inserted := false
 	ourBox := (newLength - charMin) + 2
 	// Is it longer than the words we want to check?
-	if newLength <= charLimit && newLength >= charMin {
+	if newLength <= charLimit {
 
 		// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
 		if strings.HasSuffix(candidate1, "pe") {
@@ -424,7 +425,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 			//totalCandidates++
 			stage3Map.Insert(candidate1, 1)
 		} else {
-			return false
+			return true
 		}
 		inserted = true
 	}
@@ -450,7 +451,7 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	}
 
 	lenitedLength := len([]rune(lenited))
-	if lenitedLength <= charLimit && lenitedLength >= charMin {
+	if lenitedLength <= charLimit {
 		// If it's in the range, is it good?
 		if stage3Map.Present(lenited) == 0 {
 			inserted = true
