@@ -358,7 +358,7 @@ func QueryHelper(results []Word) (string, bool) {
 
 	allNaviWords.WriteString("-")
 
-	sufUnique := findUniques(allSuffixes, false)
+	sufUnique := findUniques(allSuffixes, true)
 	allNaviWords.WriteString(sufUnique)
 
 	return allNaviWords.String(), allGood
@@ -871,13 +871,23 @@ func pxelFix(affixes [][]string) [][]string {
 	return affixes
 }
 
+// Made because slices.Reverse glitches
+func manualReverse(affixes []string) []string {
+	final := []string{}
+	for i := len(affixes); i > 0; {
+		i -= 1
+		final = append(final, affixes[i])
+	}
+	return final
+}
+
 // modified from https://www.slingacademy.com/article/how-to-find-common-elements-of-2-slices-in-go/
 func findUniques(affixes [][]string, reverse bool) string {
 	var uniques strings.Builder
 
 	if reverse {
 		for i := range affixes {
-			slices.Reverse(affixes[i])
+			affixes[i] = manualReverse(affixes[i])
 		}
 	}
 
@@ -1653,7 +1663,25 @@ func homonymSearch() error {
 		prevTotal = totalCandidates
 	}
 
+	// Do 16-20
 	interval = 5
+	secondWait = time.Now()
+	StageThree(dictCount, 0, 127, i+1, i+interval, 0, false, 100)
+	if time.Since(secondWait).Seconds() >= minWait {
+		finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
+		fmt.Println(finish_string)
+		resultsFile.WriteString(finish_string)
+	}
+
+	// Stop if no more candidates are found
+	if totalCandidates == prevTotal {
+		return nil
+	}
+
+	prevTotal = totalCandidates
+
+	// Do 21-50
+	interval = 10
 	stop_at_len = 50
 	for ; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
