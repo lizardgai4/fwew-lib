@@ -1396,7 +1396,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		return errors.New("progress interval must be 1 or greater")
 	}
 
-	message := strconv.Itoa(int(time.Since(start).Seconds())) + " seconds.  " + strconv.Itoa(int(affixLimit)) + " affix and " + strconv.Itoa(int(charLimit)) + " character limits"
+	message := strconv.Itoa(int(time.Since(start).Seconds())) + " seconds.  " + strconv.Itoa(int(charMin)) + " to " + strconv.Itoa(int(charLimit)) + " characters"
 	resultsFile.WriteString(message + "\n")
 	fmt.Println(message)
 
@@ -1672,6 +1672,7 @@ func homonymSearch() error {
 		fmt.Println(finish_string)
 		resultsFile.WriteString(finish_string)
 	}
+	i += interval
 
 	// Stop if no more candidates are found
 	if totalCandidates == prevTotal {
