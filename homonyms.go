@@ -1107,10 +1107,6 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		results, err := TranslateFromNaviHash(dict, a, true)
 
-		if strings.Contains(a, "satsengopet") {
-			fmt.Println("hi")
-		}
-
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 
 			results[0] = results[0][1:]
@@ -1620,7 +1616,7 @@ func homonymSearch() error {
 	defer previous.Close()
 
 	// Number of threads to use as dictionaries
-	dictCount := uint8(16)
+	dictCount := uint8(8)
 	for i := uint8(0); i < dictCount; i++ {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
@@ -1636,7 +1632,7 @@ func homonymSearch() error {
 	interval := 1
 
 	prevTotal := -1
-	i := 10
+	i := 0
 	for ; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
