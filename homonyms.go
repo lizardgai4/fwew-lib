@@ -66,7 +66,7 @@ var finished = queueFinished{false, sync.Mutex{}}
 var finishedSentinelValue = "lu hasey srak?"
 var wordCount = 0
 var dictArray = []*FwewDict{}
-var minWait = 30.0
+var minWait = 10.0
 
 var secondWait = time.Now()
 var secondSecondWait = time.Now()
@@ -358,7 +358,7 @@ func QueryHelper(results []Word) (string, bool) {
 
 	allNaviWords.WriteString("-")
 
-	sufUnique := findUniques(allSuffixes, true)
+	sufUnique := findUniques(allSuffixes, false)
 	allNaviWords.WriteString(sufUnique)
 
 	return allNaviWords.String(), allGood
@@ -404,13 +404,17 @@ func StageTwo() error {
 // For StageThree, this adds things to the candidates
 func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	newLength := len([]rune(candidate1))
+	if newLength < charMin-1 {
+		return true
+	}
 	inserted := false
+	ourBox := (newLength - charMin) + 2
 	// Is it longer than the words we want to check?
-	if newLength <= charLimit {
-		ourBox := 1
+	if newLength <= charLimit && newLength >= charMin {
+
 		// Particularly for nasal assimilation, we want "-pe" words to go before other affixes
 		if strings.HasSuffix(candidate1, "pe") {
-			ourBox = 0
+			ourBox -= 1
 		}
 
 		// If it's in the range, is it good?
@@ -419,6 +423,8 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 			(*candidates)[ourBox] = append((*candidates)[ourBox], candidate1)
 			//totalCandidates++
 			stage3Map.Insert(candidate1, 1)
+		} else {
+			return false
 		}
 		inserted = true
 	}
@@ -444,12 +450,12 @@ func addToCandidates(candidates *[][]string, candidate1 string) bool {
 	}
 
 	lenitedLength := len([]rune(lenited))
-	if lenitedLength <= charLimit {
+	if lenitedLength <= charLimit && lenitedLength >= charMin {
 		// If it's in the range, is it good?
 		if stage3Map.Present(lenited) == 0 {
 			inserted = true
 			// lenited ones will be sorted to appear later
-			(*candidates)[2] = append((*candidates)[2], lenited)
+			(*candidates)[ourBox+1] = append((*candidates)[ourBox+1], lenited)
 			//totalCandidates++
 			stage3Map.Insert(lenited, 1)
 		}
@@ -1101,6 +1107,10 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		results, err := TranslateFromNaviHash(dict, a, true)
 
+		if strings.Contains(a, "satsengopet") {
+			fmt.Println("hi")
+		}
+
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 
 			results[0] = results[0][1:]
@@ -1299,7 +1309,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 			// Reset dupe detector so it's not taking up all the RAM
 			stage3Map.Clear()
 
-			pigeonhole := make([][]string, 3)
+			pigeonhole := make([][]string, charLimit+5-charMin)
 
 			pigeonhole[1] = append(pigeonhole[1], word.Navi)
 
@@ -1572,7 +1582,6 @@ func homonymSearch() error {
 		// This will not read lines over 64k long, but works for Na'vi words just fine
 		for scanner.Scan() {
 			thisWord := strings.ToLower(scanner.Text())
-			first2StageMap.Insert(thisWord, 1)
 			allWords = append(allWords, thisWord)
 		}
 
@@ -1623,11 +1632,12 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	start = time.Now()
 
-	stop_at_len := 50
+	stop_at_len := 15
 	interval := 1
 
 	prevTotal := -1
-	for i := 0; i < stop_at_len; i += interval {
+	i := 10
+	for ; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
 		secondWait = time.Now()
@@ -1644,7 +1654,27 @@ func homonymSearch() error {
 		}
 
 		prevTotal = totalCandidates
+	}
 
+	interval = 5
+	stop_at_len = 50
+	for ; i < stop_at_len; i += interval {
+		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
+		// warn about inefficiencies, Progress updates after checking every N number of words
+		secondWait = time.Now()
+		StageThree(dictCount, 0, 127, i+1, i+interval, 0, false, 100)
+		if time.Since(secondWait).Seconds() >= minWait {
+			finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
+			fmt.Println(finish_string)
+			resultsFile.WriteString(finish_string)
+		}
+
+		// Stop if no more candidates are found
+		if totalCandidates == prevTotal {
+			break
+		}
+
+		prevTotal = totalCandidates
 		// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
 	}
 
