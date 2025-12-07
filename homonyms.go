@@ -1431,35 +1431,37 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		resultsFile.WriteString(finalString + "\n")
 
 		// Only show if it took at least 30 seconds.  Don't spam
-		if !completeBenchmark && time.Since(secondWait).Seconds() >= minWait {
+		if time.Since(secondWait).Seconds() >= minWait {
 			checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
 			fmt.Println(checkedString)
 			resultsFile.WriteString(checkedString + "\n")
 
-			skipped := 0
-			missed := 0
-			for _, value := range benchMap.homoMap {
-				charCount := len([]rune(value.candidate))
-				if charCount <= charLimit {
-					if !value.found {
-						missed += 1
-						missed := "Missed " + value.candidate
-						resultsFile.WriteString(missed + "\n")
-						fmt.Println(missed)
+			if !completeBenchmark {
+				skipped := 0
+				missed := 0
+				for _, value := range benchMap.homoMap {
+					charCount := len([]rune(value.candidate))
+					if charCount <= charLimit {
+						if !value.found {
+							missed += 1
+							missed := "Missed " + value.candidate
+							resultsFile.WriteString(missed + "\n")
+							fmt.Println(missed)
+						}
+					} else {
+						skipped += 1
 					}
-				} else {
-					skipped += 1
 				}
-			}
-			if skipped == 0 && missed == 0 {
-				fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
-				resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones\n")
-				completeBenchmark = true
-			} else {
-				found := benchTotal - (skipped + missed)
-				found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
-				fmt.Println(found_string)
-				resultsFile.WriteString(found_string)
+				if skipped == 0 && missed == 0 {
+					fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
+					resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones\n")
+					completeBenchmark = true
+				} else {
+					found := benchTotal - (skipped + missed)
+					found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
+					fmt.Println(found_string)
+					resultsFile.WriteString(found_string)
+				}
 			}
 		}
 	}
