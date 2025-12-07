@@ -93,6 +93,8 @@ var makeWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup
 var start time.Time
 
+var completeBenchmark = false
+
 // FifoQueue
 type FifoQueue interface {
 	Insert()
@@ -1429,7 +1431,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		resultsFile.WriteString(finalString + "\n")
 
 		// Only show if it took at least 30 seconds.  Don't spam
-		if time.Since(secondWait).Seconds() >= minWait {
+		if !completeBenchmark && time.Since(secondWait).Seconds() >= minWait {
 			checkedString := "Narrowed from " + strconv.Itoa(totalCandidates) + " conjugations to " + strconv.Itoa(resultCount)
 			fmt.Println(checkedString)
 			resultsFile.WriteString(checkedString + "\n")
@@ -1452,6 +1454,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 			if skipped == 0 && missed == 0 {
 				fmt.Println("You found all the legitimate homonyms\nContinuing probably won't find new ones")
 				resultsFile.WriteString("You found all the legitimate homonyms\nContinuing probably won't find new ones\n")
+				completeBenchmark = true
 			} else {
 				found := benchTotal - (skipped + missed)
 				found_string := "You found " + strconv.Itoa(found) + " out of " + strconv.Itoa(benchTotal) + " homonyms\n"
@@ -1639,11 +1642,12 @@ func homonymSearch() error {
 	fmt.Println("Stage 3:")
 	start = time.Now()
 
-	stop_at_len := 15
+	stop_at_len := 50
 	interval := 1
 
 	prevTotal := -1
 	i := 0
+	// Do 1-15 individually
 	for ; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
 		// warn about inefficiencies, Progress updates after checking every N number of words
@@ -1661,48 +1665,22 @@ func homonymSearch() error {
 		}
 
 		prevTotal = totalCandidates
+
+		// If you found the longest homonym
+		if completeBenchmark {
+			break
+		}
 	}
 
-	// Do 16-20
-	interval = 5
+	// Do 16-50
 	secondWait = time.Now()
-	StageThree(dictCount, 0, 127, i+1, i+interval, 0, false, 100)
+	StageThree(dictCount, 0, 127, i+1, stop_at_len, 0, false, 100)
 	if time.Since(secondWait).Seconds() >= minWait {
 		finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
 		fmt.Println(finish_string)
 		resultsFile.WriteString(finish_string)
 	}
 	i += interval
-
-	// Stop if no more candidates are found
-	if totalCandidates == prevTotal {
-		return nil
-	}
-
-	prevTotal = totalCandidates
-
-	// Do 21-50
-	interval = 10
-	stop_at_len = 50
-	for ; i < stop_at_len; i += interval {
-		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
-		// warn about inefficiencies, Progress updates after checking every N number of words
-		secondWait = time.Now()
-		StageThree(dictCount, 0, 127, i+1, i+interval, 0, false, 100)
-		if time.Since(secondWait).Seconds() >= minWait {
-			finish_string := "Checked up to " + strconv.Itoa(i+interval) + " characters long\n"
-			fmt.Println(finish_string)
-			resultsFile.WriteString(finish_string)
-		}
-
-		// Stop if no more candidates are found
-		if totalCandidates == prevTotal {
-			break
-		}
-
-		prevTotal = totalCandidates
-		// For nasal assimilation mode, change nasalAssimilationOnly variable at the top of this file.
-	}
 
 	return nil
 }
