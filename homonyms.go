@@ -62,6 +62,11 @@ var forbiddenSuffixCombos = [][][]string{
 	{{"tsyìp", "pe"}, {"tsyìp", "ä"}}, // any noun can have "which little X" and "of little X" look the same in reef
 }
 
+var forbiddenPrefixCombos = [][][]string{
+	{{"pxe"}, {"pe"}},  // If a noun ends with p and/or has tsyìp,
+	{{"pay"}, {"fay"}}, // If a noun ends with r, "using some X" sounds like "beside X"
+}
+
 var resultsFile *os.File
 var previous *os.File
 var timeFormat = "2006-01-02 15:04:05"
@@ -1135,27 +1140,82 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		results, err := TranslateFromNaviHash(dict, a, true)
 
+		if a == "pesengopel" {
+			fmt.Println("hi")
+		}
+
 		// Block -pel nouns without blocking tepel
 		for _, forbid := range forbiddenSuffixCombos {
 			clear := false
 			for !clear {
 				hasAll := [][]string{{}, {}}
-				remove := -1
+				remove := [][]int{{}, {}}
 				for i, result := range results[0] {
 					if implContainsAll(forbid[0], result.Affixes.Suffix) {
 						hasAll[0] = append(hasAll[0], result.Navi)
+						remove[0] = append(remove[0], i)
 					}
 					if implContainsAll(forbid[1], result.Affixes.Suffix) {
 						hasAll[1] = append(hasAll[1], result.Navi)
-						remove = i
+						remove[1] = append(remove[1], i)
 					}
 				}
 				// If there is something like it, remove it
 				if len(hasAll[0]) > 0 && len(hasAll[1]) > 0 &&
 					implContainsAny(hasAll[0], hasAll[1]) && implContainsAny(hasAll[1], hasAll[0]) {
 					tempResults2 := []Word{}
+					// Make sure it's the same word
+					i2 := len(remove[1]) - 1
+					last0 := len(remove[0]) - 1
+					for i2 >= 0 && i2 != remove[0][last0] && results[0][last0].Navi != results[0][remove[1][i2]].Navi {
+						i2 -= 1
+					}
+					if i2 < 0 {
+						i2 = remove[0][last0]
+					}
 					for i, result := range results[0] {
-						if remove != i {
+						if i2 != i {
+							tempResults2 = append(tempResults2, result)
+						}
+					}
+					results[0] = tempResults2
+				} else {
+					clear = true
+				}
+			}
+		}
+
+		// Block -pel nouns without blocking tepel
+		for _, forbid := range forbiddenPrefixCombos {
+			clear := false
+			for !clear {
+				hasAll := [][]string{{}, {}}
+				remove := [][]int{{}, {}}
+				for i, result := range results[0] {
+					if implContainsAll(forbid[0], result.Affixes.Prefix) {
+						hasAll[0] = append(hasAll[0], result.Navi)
+						remove[0] = append(remove[0], i)
+					}
+					if implContainsAll(forbid[1], result.Affixes.Prefix) {
+						hasAll[1] = append(hasAll[1], result.Navi)
+						remove[1] = append(remove[1], i)
+					}
+				}
+				// If there is something like it, remove it
+				if len(hasAll[0]) > 0 && len(hasAll[1]) > 0 &&
+					implContainsAny(hasAll[0], hasAll[1]) && implContainsAny(hasAll[1], hasAll[0]) {
+					tempResults2 := []Word{}
+					// Make sure it's the same word
+					i2 := len(remove[1]) - 1
+					last0 := len(remove[0]) - 1
+					for i2 >= 0 && i2 != remove[0][last0] && results[0][last0].Navi != results[0][remove[1][i2]].Navi {
+						i2 -= 1
+					}
+					if i2 < 0 {
+						i2 = remove[0][last0]
+					}
+					for i, result := range results[0] {
+						if i2 != i {
 							tempResults2 = append(tempResults2, result)
 						}
 					}
