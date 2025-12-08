@@ -56,6 +56,12 @@ var changePOS = map[string]bool{
 	"tseng":  true, //[verb]place
 }
 
+var forbiddenSuffixCombos = [][][]string{
+	{{"pe", "l"}, {"pxel"}},           // If a noun ends with p and/or has tsyìp,
+	{{"o", "fa"}, {"rofa"}},           // If a noun ends with r, "using some X" sounds like "beside X"
+	{{"tsyìp", "pe"}, {"tsyìp", "ä"}}, // any noun can have "which little X" and "of little X" look the same in reef
+}
+
 var resultsFile *os.File
 var previous *os.File
 var timeFormat = "2006-01-02 15:04:05"
@@ -987,6 +993,28 @@ func Unlenite(input string) []string {
 	return results
 }
 
+// fuction to check if an array contains all elements
+func implContainsAll(sl []string, names []string) bool {
+	has := make([]bool, len(sl))
+	for i := range has {
+		has[i] = false
+	}
+	// iterate over the array and compare given string to each element
+	for i, value := range sl {
+		for _, name := range names {
+			if value == name {
+				has[i] = true
+			}
+		}
+	}
+	for _, val := range has {
+		if val == false {
+			return false
+		}
+	}
+	return true
+}
+
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
 	defer checkWaitGroup.Done()
 	wait := false
@@ -1105,20 +1133,38 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			}
 		}
 
-		// These can clog up the search results
-		cloggedSuffixes := []string{"rofa", "rofasì", "tsyìpel", "tsyìpelsì"}
-		clog := false
-		for _, suffix := range cloggedSuffixes {
-			if strings.HasSuffix(a, suffix) {
-				clog = true
-				break
+		results, err := TranslateFromNaviHash(dict, a, true)
+
+		// Block -pel nouns without blocking tepel
+		for _, forbid := range forbiddenSuffixCombos {
+			clear := false
+			for !clear {
+				hasAll := [][]string{{}, {}}
+				remove := -1
+				for i, result := range results[0] {
+					if implContainsAll(forbid[0], result.Affixes.Suffix) {
+						hasAll[0] = append(hasAll[0], result.Navi)
+					}
+					if implContainsAll(forbid[1], result.Affixes.Suffix) {
+						hasAll[1] = append(hasAll[1], result.Navi)
+						remove = i
+					}
+				}
+				// If there is something like it, remove it
+				if len(hasAll[0]) > 0 && len(hasAll[1]) > 0 &&
+					implContainsAny(hasAll[0], hasAll[1]) && implContainsAny(hasAll[1], hasAll[0]) {
+					tempResults2 := []Word{}
+					for i, result := range results[0] {
+						if remove != i {
+							tempResults2 = append(tempResults2, result)
+						}
+					}
+					results[0] = tempResults2
+				} else {
+					clear = true
+				}
 			}
 		}
-		if clog {
-			continue
-		}
-
-		results, err := TranslateFromNaviHash(dict, a, true)
 
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
 
