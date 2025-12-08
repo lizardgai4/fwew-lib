@@ -63,8 +63,9 @@ var forbiddenSuffixCombos = [][][]string{
 }
 
 var forbiddenPrefixCombos = [][][]string{
-	{{"pxe"}, {"pe"}},  // If a noun ends with p and/or has tsyìp,
-	{{"pay"}, {"fay"}}, // If a noun ends with r, "using some X" sounds like "beside X"
+	{{"pxe"}, {"pe"}},
+	{{"pay"}, {"fay"}},
+	{{"pxay"}, {"pay"}},
 }
 
 var resultsFile *os.File
