@@ -20,6 +20,7 @@ var candidates2 Queue = *CreateQueue(120000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
+var scunthorpeMap = HomoMapStruct{}
 var benchMap = BenchMapStruct{}
 var benchTotal = 0
 var resultCount = 0
@@ -33,6 +34,21 @@ var lenitionMap = map[string]string{
 	"k":  "h",
 	"kx": "k",
 	"'":  "",
+}
+
+var swears = []string{
+	"skxawng",
+	"kalweyaveng",
+	"kurkung",
+	"la'ang",
+	"pxasìk",
+	"teylupil",
+	"tsahey",
+	"txanfwìngtu",
+	"vitronvä'",
+	"vonvä'",
+	"wiya",
+	"yayl",
 }
 
 var inefficiencyWarning = false
@@ -70,6 +86,7 @@ var forbiddenPrefixCombos = [][][]string{
 
 var resultsFile *os.File
 var previous *os.File
+var scunthorpe *os.File
 var timeFormat = "2006-01-02 15:04:05"
 
 //var dupeLengthsMap = map[int]int{}
@@ -416,10 +433,24 @@ func StageTwo() error {
 }
 
 // For StageThree, this adds things to the candidates
-func addToCandidates(candidates *[][]string, candidate1 string) bool {
+func addToCandidates(candidates *[][]string, candidate1 string, baseWord string) bool {
 	newLength := len([]rune(candidate1))
 	if newLength < charMin {
 		return true
+	}
+
+	// Check for the Scunthorpe problem
+	for _, swear := range swears {
+		if strings.Contains(candidate1, swear) && swear != baseWord {
+			query := swear + " " + baseWord
+			if scunthorpeMap.Present(query) == 0 {
+				scunthorpeMap.Insert(query, uint8(1))
+				result2 := swear + " " + candidate1
+				fmt.Println("Scunthorpe: " + result2)
+				scunthorpe.WriteString(query + "\n")
+			}
+			break
+		}
 	}
 
 	inserted := false
@@ -493,7 +524,7 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 	runeLen := len([]rune(inputNavi))
 
 	inserted := true
-	inserted = addToCandidates(candidates, inputNavi)
+	inserted = addToCandidates(candidates, inputNavi, input.Navi)
 
 	if runeLen > charLimit {
 		return nil
@@ -719,7 +750,7 @@ func removeBrackets(input string) string {
 }
 
 // Helper for StageThree, based on reconstruct from affixes.go
-func reconjugateVerbs(candidates *[][]string, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8, add bool) error {
+func reconjugateVerbs(candidates *[][]string, input Word, inputNavi string, prefirstUsed bool, firstUsed bool, secondUsed bool, affixLimit int8, add bool) error {
 	if affixLimit == 0 {
 		return nil
 	}
@@ -727,7 +758,7 @@ func reconjugateVerbs(candidates *[][]string, inputNavi string, prefirstUsed boo
 	if add {
 		inserted := true
 		noBracket := removeBrackets(inputNavi)
-		inserted = addToCandidates(candidates, noBracket)
+		inserted = addToCandidates(candidates, noBracket, input.Navi)
 
 		if !inserted {
 			return nil
@@ -735,20 +766,20 @@ func reconjugateVerbs(candidates *[][]string, inputNavi string, prefirstUsed boo
 	}
 
 	if !prefirstUsed {
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed, affixLimit-1, false)
+		reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<0>", ""), true, firstUsed, secondUsed, affixLimit-1, false)
 		for _, a := range prefirst {
-			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", a), true, firstUsed, secondUsed, affixLimit-1, true)
+			reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<0>", a), true, firstUsed, secondUsed, affixLimit-1, true)
 		}
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<0>", "äpeyk"), true, firstUsed, secondUsed, affixLimit-1, true)
+		reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<0>", "äpeyk"), true, firstUsed, secondUsed, affixLimit-1, true)
 	} else if !firstUsed {
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<1>", ""), prefirstUsed, true, secondUsed, affixLimit-1, false)
+		reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<1>", ""), prefirstUsed, true, secondUsed, affixLimit-1, false)
 		for _, a := range first {
-			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<1>", a), prefirstUsed, true, secondUsed, affixLimit-1, true)
+			reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<1>", a), prefirstUsed, true, secondUsed, affixLimit-1, true)
 		}
 	} else if !secondUsed {
-		reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<2>", ""), prefirstUsed, firstUsed, true, affixLimit-1, false)
+		reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<2>", ""), prefirstUsed, firstUsed, true, affixLimit-1, false)
 		for _, a := range second {
-			reconjugateVerbs(candidates, strings.ReplaceAll(inputNavi, "<2>", a), prefirstUsed, firstUsed, true, affixLimit-1, true)
+			reconjugateVerbs(candidates, input, strings.ReplaceAll(inputNavi, "<2>", a), prefirstUsed, firstUsed, true, affixLimit-1, true)
 		}
 	}
 
@@ -762,19 +793,19 @@ func reconjugate(pigeonhole *[][]string, word Word, allowPrefixes bool, affixLim
 	word.Navi = strings.ToLower(word.Navi)
 
 	if word.PartOfSpeech == "pn." {
-		addToCandidates(pigeonhole, "nì"+word.Navi)
+		addToCandidates(pigeonhole, "nì"+word.Navi, word.Navi)
 	}
 
 	if word.PartOfSpeech == "n." || word.PartOfSpeech == "pn." || word.PartOfSpeech == "Prop.n." || word.PartOfSpeech == "inter." {
 		reconjugateNouns(pigeonhole, word, word.Navi, 0, 0, 0, affixLimit)
 	} else if word.PartOfSpeech[0] == 'v' {
-		reconjugateVerbs(pigeonhole, word.InfixLocations, false, false, false, affixLimit, false)
+		reconjugateVerbs(pigeonhole, word, word.InfixLocations, false, false, false, affixLimit, false)
 
 		// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 		for _, a := range []string{"us", "awn"} {
 			participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
 
-			addToCandidates(pigeonhole, participle+"a")
+			addToCandidates(pigeonhole, participle+"a", word.Navi)
 		}
 
 		//None of these can productively combine with infixes
@@ -789,13 +820,13 @@ func reconjugate(pigeonhole *[][]string, word Word, allowPrefixes bool, affixLim
 				"tsuk" + word.Navi + "a", "ketsuk" + word.Navi, "hetsuk" + word.Navi, "aketsuk" + word.Navi,
 				"ketsuk" + word.Navi + "a", "hetsuk" + word.Navi + "a"}
 			for _, a := range abilityVerbs {
-				addToCandidates(pigeonhole, a)
+				addToCandidates(pigeonhole, a, word.Navi)
 			}
 
 			// v<us>erb and v<awn>erb (active and passive participles) with attributive markers
 			for _, a := range []string{"us", "awn"} {
 				participle := removeBrackets(strings.ReplaceAll(word.InfixLocations, "<1>", a))
-				addToCandidates(pigeonhole, "a"+participle)
+				addToCandidates(pigeonhole, "a"+participle, word.Navi)
 			}
 		}
 		// Ability to [verb]
@@ -804,11 +835,11 @@ func reconjugate(pigeonhole *[][]string, word Word, allowPrefixes bool, affixLim
 		reconjugateNouns(pigeonhole, word, word.Navi+"tseng", 0, 0, 0, affixLimit-1)
 
 	} else if word.PartOfSpeech == "adj." || word.PartOfSpeech == "num." {
-		addToCandidates(pigeonhole, word.Navi+"a")
+		addToCandidates(pigeonhole, word.Navi+"a", word.Navi)
 
 		if allowPrefixes {
-			addToCandidates(pigeonhole, "a"+word.Navi)
-			addToCandidates(pigeonhole, "nì"+word.Navi)
+			addToCandidates(pigeonhole, "a"+word.Navi, word.Navi)
+			addToCandidates(pigeonhole, "nì"+word.Navi, word.Navi)
 		}
 	}
 }
@@ -1141,10 +1172,6 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		results, err := TranslateFromNaviHash(dict, a, true)
 
-		if a == "pesengopel" {
-			fmt.Println("hi")
-		}
-
 		// Block -pel nouns without blocking tepel
 		for _, forbid := range forbiddenSuffixCombos {
 			clear := false
@@ -1245,7 +1272,7 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			}
 
 			bench := benchMap.Present(homoMapQuery)
-			if bench.found == false {
+			if !bench.found {
 				bench.found = true
 				benchMap.Insert(homoMapQuery, bench)
 			}
@@ -1446,7 +1473,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 				}
 			}
 			if lenited != "" {
-				addToCandidates(&pigeonhole, lenited)
+				addToCandidates(&pigeonhole, lenited, word.Navi)
 			}
 
 			// No multiword words
@@ -1612,6 +1639,7 @@ func homonymSearch() error {
 
 	// We'll need this for the previous file
 	homoMap.homoMap = map[string]uint8{}
+	scunthorpeMap.homoMap = map[string]uint8{}
 	benchMap.homoMap = map[string]BenchResult{}
 	first2StageMap.homoMap = map[string]uint8{}
 	stage3Map.homoMap = map[string]uint8{}
@@ -1733,6 +1761,72 @@ func homonymSearch() error {
 		}
 	} else {
 		fmt.Println("benchmark.txt needed")
+		return err
+	}
+
+	// See if any conjugation runs into the Scunthorpe problem in Na'vi
+	if _, err := os.Stat("scunthorpe.txt"); err == nil {
+		// path/to/whatever exists
+		b, err2 := os.Open("scunthorpe.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
+			return err2
+		}
+
+		allWords := []string{}
+
+		scanner := bufio.NewScanner(b)
+		// This will not read lines over 64k long, but works for Na'vi words just fine
+		for scanner.Scan() {
+			first2StageMap.Insert(scanner.Text(), 1)
+			allWords = append(allWords, scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		sort.Slice(allWords, func(i, j int) bool {
+			return AlphabetizeHelper(allWords[i], allWords[j])
+		})
+
+		a, err := os.Create("scunthorpe.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+
+		for _, word := range allWords {
+			resultCount++
+			// Make sure it knows the signatures of the older words so it doesn't duplicate them
+
+			for _, b := range swears {
+				if strings.Contains(word, b) {
+					// No duplicates
+					if scunthorpeMap.Present(word) == 0 {
+						scunthorpeMap.Insert(word, uint8(len([]rune(word))))
+					}
+
+					a.WriteString(word + "\n")
+				}
+			}
+		}
+
+		scunthorpe = a
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err := os.Create("scunthorpe.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		scunthorpe = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not previous.txt exists")
 		return err
 	}
 
