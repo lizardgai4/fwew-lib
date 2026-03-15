@@ -17,6 +17,7 @@ import (
 
 var homonymsArray = []string{"", "", ""}
 var candidates2 Queue = *CreateQueue(120000)
+var dictqueue WordQueue = *CreateWordQueue(4000)
 var first2StageMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
@@ -92,7 +93,9 @@ var timeFormat = "2006-01-02 15:04:05"
 //var dupeLengthsMap = map[int]int{}
 
 var finished = queueFinished{false, sync.Mutex{}}
+var finishedDict = queueFinished{false, sync.Mutex{}}
 var finishedSentinelValue = "lu hasey srak?"
+var finalSentinel = "Lu hasey set"
 var wordCount = 0
 var dictArray = []*FwewDict{}
 var minWait = 10.0
@@ -116,9 +119,16 @@ type HomoMapStruct struct {
 	homoMap map[string]uint8
 }
 
+type WordQueue struct {
+	mu       sync.Mutex
+	capacity int
+	q        []Word
+}
+
 var writeLock sync.Mutex
 var addWaitGroup sync.WaitGroup
 var makeWaitGroup sync.WaitGroup
+var conjuWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup
 var start time.Time
 
@@ -179,14 +189,18 @@ func (h *BenchMapStruct) Present(item string) BenchResult {
 }
 
 // Insert inserts the item into the queue
-func (q *Queue) Insert(item string) error {
+func (q *Queue) Insert(items []string) error {
+	if len(q.q) > q.capacity-len(items) {
+		return errors.New("Queue is full")
+	}
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	if len(q.q) < int(q.capacity) {
-		q.q = append(q.q, item)
-		return nil
+	for _, item := range items {
+		if len(q.q) < int(q.capacity) {
+			q.q = append(q.q, item)
+		}
 	}
-	return errors.New("Queue is full")
+	return nil
 }
 
 // Remove removes the oldest element from the queue
@@ -207,11 +221,47 @@ func (q *Queue) Length() int {
 	return len(q.q)
 }
 
+// Insert inserts the item into the queue
+func (q *WordQueue) Insert(item Word) error {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if len(q.q) < int(q.capacity) {
+		q.q = append(q.q, item)
+	}
+	return nil
+}
+
+// Remove removes the oldest element from the queue
+func (q *WordQueue) Remove() (Word, error) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if len(q.q) > 0 {
+		item := q.q[0]
+		q.q = q.q[1:]
+		return item, nil
+	}
+	return newWord([]string{""}, readDictPos([]string{""})), errors.New("Queue is empty")
+}
+
+func (q *WordQueue) Length() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.q)
+}
+
 // CreateQueue creates an empty queue with desired capacity
 func CreateQueue(capacity int) *Queue {
 	return &Queue{
 		capacity: capacity,
 		q:        make([]string, 0, capacity),
+	}
+}
+
+// CreateQueue creates an empty queue with desired capacity
+func CreateWordQueue(capacity int) *WordQueue {
+	return &WordQueue{
+		capacity: capacity,
+		q:        make([]Word, 0, capacity),
 	}
 }
 
@@ -1054,6 +1104,7 @@ func implContainsAll(sl []string, names []string) bool {
 
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
 	defer checkWaitGroup.Done()
+
 	wait := false
 	firstWait := true
 	start2 := time.Now()
@@ -1062,7 +1113,6 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 
 		// Don't pull from empty
 		for candidates2.Length() == 0 {
-			time.Sleep(time.Millisecond * 5)
 
 			// Make sure it's not finished first
 			finished.mu.Lock()
@@ -1072,6 +1122,8 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			if makingFinished {
 				break
 			}
+
+			time.Sleep(time.Millisecond * 5)
 		}
 
 		if makingFinished {
@@ -1378,7 +1430,6 @@ func foundResult(conjugation string, homonymfo string, show bool) error {
 }
 
 func addHomsAsync(pigeonhole *[][]string) {
-	defer addWaitGroup.Done()
 	low := !inefficiencyWarning
 	lengthy := candidates2.Length()
 
@@ -1387,8 +1438,15 @@ func addHomsAsync(pigeonhole *[][]string) {
 	k := []string{"k", "kx"}
 	first := true
 
+	num_insert := 5
+	num_i := 0
+
+	miniqueue := []string{}
+
 	for _, alpha := range *pigeonhole {
 		for _, a := range alpha {
+			// Count to num_insert
+
 			if len([]rune(a)) < charMin {
 				if !first {
 					continue
@@ -1425,34 +1483,80 @@ func addHomsAsync(pigeonhole *[][]string) {
 				}
 			}
 
-			//start2 := time.Now()
-			err3 := candidates2.Insert(a)
+			miniqueue = append(miniqueue, a)
 
-			if err3 != nil {
-				for candidates2.Length() > 80000 {
-					time.Sleep(time.Millisecond * 5)
+			if num_i == num_insert {
+				num_i = 0
+
+				//start2 := time.Now()
+				err3 := candidates2.Insert(miniqueue)
+
+				if err3 != nil {
+					for candidates2.Length() > 80000 {
+						time.Sleep(time.Millisecond * 5)
+					}
+					candidates2.Insert(miniqueue)
 				}
-				candidates2.Insert(a)
+
+				miniqueue = nil
 			}
+
+			num_i += 1
 
 			//fmt.Println("waited " + strconv.FormatInt(time.Since(start2).Milliseconds(), 10) + "ms"
 		}
 	}
+
+	err3 := candidates2.Insert(miniqueue)
+
+	if err3 != nil {
+		for candidates2.Length() > 80000 {
+			time.Sleep(time.Millisecond * 5)
+		}
+		candidates2.Insert(miniqueue)
+	}
 }
 
-func makeHomsAsync(affixLimit int8, startNumber int) error {
-	defer makeWaitGroup.Done()
-	wordCount = 0
+func reconjugateAsync(startNumber int, affixLimit int8) {
+	defer conjuWaitGroup.Done()
 
-	err := RunOnDict(func(word Word) error {
+	makingDictFinished := false
+	for !makingDictFinished {
+
 		wordCount += 1
 		//checkAsyncLock.Wait()
+
+		// Don't pull from empty
+		for dictqueue.Length() == 0 {
+
+			// Make sure it's not finished first
+			finishedDict.mu.Lock()
+			makingDictFinished = finishedDict.finished
+			finishedDict.mu.Unlock()
+
+			if makingDictFinished {
+				candidates2.Insert([]string{finishedSentinelValue})
+				break
+			}
+
+			time.Sleep(time.Millisecond * 5)
+		}
+
+		if makingDictFinished {
+			break
+		}
+
+		word, err := dictqueue.Remove()
+
+		if err != nil {
+			break
+		}
 
 		if wordCount >= startNumber {
 			// Reset dupe detector so it's not taking up all the RAM
 			stage3Map.Clear()
 
-			pigeonhole := make([][]string, charLimit+5-charMin)
+			pigeonhole := make([][]string, charLimit+6-charMin)
 
 			pigeonhole[1] = append(pigeonhole[1], word.Navi)
 
@@ -1494,19 +1598,29 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 				//reconjugateNouns(&pigeonhole, word, siless+"tseng", 0, 0, 0, affixLimit)
 			}
 
-			addWaitGroup.Wait()
-			addWaitGroup.Add(1)
-			go addHomsAsync(&pigeonhole)
+			addHomsAsync(&pigeonhole)
 		}
+	}
+}
+
+func makeHomsAsync() error {
+	defer makeWaitGroup.Done()
+
+	err := RunOnDict(func(word Word) error {
+		dictqueue.Insert(word)
 
 		return nil
 	})
 
-	candidates2.Insert(finishedSentinelValue)
+	finishedDict.mu.Lock()
+	finishedDict.finished = true
+	finishedDict.mu.Unlock()
+
 	if time.Since(secondWait).Seconds() >= minWait {
 		fmt.Println("Finished making word candidates")
 		resultsFile.WriteString("Finished making word candidates\n")
 	}
+	wordCount = 0
 
 	return err
 }
@@ -1514,6 +1628,7 @@ func makeHomsAsync(affixLimit int8, startNumber int) error {
 func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, charLimitSet int, startNumber int,
 	inefficiencyWarningSet bool, progressIntervalSet int) (err error) {
 	finished.finished = false
+	finishedDict.finished = false
 
 	secondSecondWait = secondWait
 
@@ -1537,7 +1652,15 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	fmt.Println(message)
 
 	makeWaitGroup.Add(1)
-	go makeHomsAsync(affixLimit, startNumber)
+	go makeHomsAsync()
+
+	// You'd only have to adjust the conjugator number if you have
+	// a ridiculous core count like an AMD Threadripper
+	conjugators := uint8(1)
+	for i := uint8(0); i < conjugators; i++ {
+		conjuWaitGroup.Add(1)
+		go reconjugateAsync(startNumber, affixLimit)
+	}
 	for _, dict := range dictArray {
 		checkWaitGroup.Add(1)
 		go CheckHomsAsync(dict, minAffix)
@@ -1545,6 +1668,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 
 	makeWaitGroup.Wait()
 
+	conjuWaitGroup.Wait()
 	checkWaitGroup.Wait()
 
 	if time.Since(secondWait).Seconds() >= minWait {
