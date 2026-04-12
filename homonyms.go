@@ -19,6 +19,7 @@ var homonymsArray = []string{"", "", ""}
 var candidates2 Queue = *CreateQueue(120000)
 var dictqueue WordQueue = *CreateWordQueue(4000)
 var first2StageMap = HomoMapStruct{}
+var palindromeMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
 var homoMap = HomoMapStruct{}
 var scunthorpeMap = HomoMapStruct{}
@@ -87,6 +88,7 @@ var forbiddenPrefixCombos = [][][]string{
 
 var resultsFile *os.File
 var previous *os.File
+var palindromes *os.File
 var scunthorpe *os.File
 var timeFormat = "2006-01-02 15:04:05"
 
@@ -1222,6 +1224,49 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 			}
 		}
 
+		// Palindrome stuff
+		palindrome := a
+
+		for _, combo := range [][]string{{"px", "B"}, {"tx", "D"}, {"kx", "Q"}, {"ng", "G"}} { //, {"ts", "C"}, {"aw", "0"}, {"ay", "1"}, {"ew", "2"}, {"ey", "3"}} {
+			palindrome = strings.ReplaceAll(palindrome, combo[0], combo[1])
+		}
+
+		palindrome0 := palindrome
+
+		for _, combo := range [][]string{{"ts", "C"}} {
+			palindrome0 = strings.ReplaceAll(palindrome0, combo[0], combo[1])
+		}
+
+		palindrome3 := palindrome0
+
+		for _, combo := range [][]string{{"aw", "0"}, {"ay", "1"}, {"ew", "2"}, {"ey", "3"}} {
+			palindrome3 = strings.ReplaceAll(palindrome3, combo[0], combo[1])
+		}
+
+		palindrome2 := ""
+		for _, ourRune := range []rune(palindrome) {
+			palindrome2 = string(ourRune) + palindrome2
+		}
+
+		palindrome1 := ""
+		for _, ourRune := range []rune(palindrome0) {
+			palindrome1 = string(ourRune) + palindrome1
+		}
+
+		palindrome4 := ""
+		for _, ourRune := range []rune(palindrome3) {
+			palindrome4 = string(ourRune) + palindrome4
+		}
+
+		if palindrome == palindrome2 || palindrome1 == palindrome0 || palindrome4 == palindrome3 {
+			ok := palindromeMap.Present(a)
+			if ok == uint8(0) {
+				fmt.Println("Palindrome: ", a)
+				palindromes.WriteString(a + "\n")
+				palindromeMap.Insert(a, 1)
+			}
+		}
+
 		results, err := TranslateFromNaviHash(dict, a, true)
 
 		// Block -pel nouns without blocking tepel
@@ -1694,7 +1739,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 			fmt.Println(checkedString)
 			resultsFile.WriteString(checkedString + "\n")
 
-			if !completeBenchmark {
+			if !completeBenchmark && !nasalAssimilationOnly {
 				skipped := 0
 				missed := 0
 				for _, value := range benchMap.homoMap {
@@ -1766,6 +1811,7 @@ func homonymSearch() error {
 	scunthorpeMap.homoMap = map[string]uint8{}
 	benchMap.homoMap = map[string]BenchResult{}
 	first2StageMap.homoMap = map[string]uint8{}
+	palindromeMap.homoMap = map[string]uint8{}
 	stage3Map.homoMap = map[string]uint8{}
 
 	if _, err := os.Stat("previous.txt"); err == nil {
@@ -1888,6 +1934,60 @@ func homonymSearch() error {
 		return err
 	}
 
+	// Look for palindromes
+	if _, err := os.Stat("palindromes.txt"); err == nil {
+		// path/to/whatever exists
+		b, err2 := os.Open("palindromes.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
+			return err2
+		}
+
+		allWords := []string{}
+
+		scanner := bufio.NewScanner(b)
+		// This will not read lines over 64k long, but works for Na'vi words just fine
+		for scanner.Scan() {
+			palindromeMap.Insert(scanner.Text(), 1)
+			allWords = append(allWords, scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		sort.Slice(allWords, func(i, j int) bool {
+			return AlphabetizeHelper(allWords[i], allWords[j])
+		})
+
+		a, err := os.Create("palindromes.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+
+		for _, word := range allWords {
+			a.WriteString(word + "\n")
+		}
+
+		palindromes = a
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err := os.Create("palindromes.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		palindromes = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not palindromes.txt exists")
+		return err
+	}
+
 	// See if any conjugation runs into the Scunthorpe problem in Na'vi
 	if _, err := os.Stat("scunthorpe.txt"); err == nil {
 		// path/to/whatever exists
@@ -1950,7 +2050,7 @@ func homonymSearch() error {
 
 		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
 
-		fmt.Println("An error occured determining whether or not previous.txt exists")
+		fmt.Println("An error occured determining whether or not scunthorpe.txt exists")
 		return err
 	}
 
