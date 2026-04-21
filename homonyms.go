@@ -21,9 +21,12 @@ var dictqueue WordQueue = *CreateWordQueue(4000)
 var first2StageMap = HomoMapStruct{}
 var palindromeMap = HomoMapStruct{}
 var stage3Map = HomoMapStruct{}
+var anagramMap = AnagramMapStruct{}
 var homoMap = HomoMapStruct{}
 var scunthorpeMap = HomoMapStruct{}
 var benchMap = BenchMapStruct{}
+var anagramTopMap = map[string]bool{}
+var anagramShortMap = map[string]bool{}
 var benchTotal = 0
 var resultCount = 0
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
@@ -121,6 +124,11 @@ type HomoMapStruct struct {
 	homoMap map[string]uint8
 }
 
+type AnagramMapStruct struct {
+	mu      sync.Mutex
+	homoMap map[string][]string
+}
+
 type WordQueue struct {
 	mu       sync.Mutex
 	capacity int
@@ -159,6 +167,30 @@ func (h *HomoMapStruct) Present(item string) uint8 {
 }
 
 func (h *HomoMapStruct) Clear() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	clear(h.homoMap)
+}
+
+func (h *AnagramMapStruct) Insert(signature string, words []string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := anagramTopMap[signature]; ok {
+		return
+	}
+	stringlist, ok := h.homoMap[signature]
+	if ok == true {
+		if implContainsAny(stringlist, words) {
+			return
+		}
+		h.homoMap[signature] = append(stringlist, words...)
+
+	} else {
+		h.homoMap[signature] = words
+	}
+}
+
+func (h *AnagramMapStruct) Clear() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	clear(h.homoMap)
@@ -453,6 +485,11 @@ func StageTwo() error {
 
 	err := runOnFile(func(word Word) error {
 		lower := strings.ToLower(word.Navi)
+
+		// Anagram stuff
+		signature := anagramSignature(lower)
+		anagramMap.Insert(signature, []string{lower})
+
 		if first2StageMap.Present(lower) == 0 {
 			standardizedWord := word.Navi
 
@@ -477,6 +514,24 @@ func StageTwo() error {
 	if err != nil {
 		log.Printf("Error in homonyms stage 2: %s", err)
 		return err
+	}
+
+	anagramMap.mu.Lock()
+	defer anagramMap.mu.Unlock()
+
+	for key, val := range anagramMap.homoMap {
+		if len(val) > 1 {
+			anagramTopMap[key] = true
+			var buffer strings.Builder
+			for i, valvi := range val {
+				if i != 0 {
+					buffer.WriteString(" ")
+				}
+				buffer.WriteString(valvi)
+			}
+			fmt.Println(key + " " + buffer.String())
+			resultsFile.WriteString(buffer.String() + "\n")
+		}
 	}
 
 	//fmt.Println(homonymsArray[1])
@@ -1104,6 +1159,36 @@ func implContainsAll(sl []string, names []string) bool {
 	return true
 }
 
+func anagramSignature(word string) string {
+	distribution := map[rune]int{}
+
+	for _, letter := range []rune(word) {
+		if num, ok := distribution[letter]; ok {
+			distribution[letter] = num + 1
+		} else {
+			distribution[letter] = 1
+		}
+	}
+
+	results_slice := []string{}
+
+	for key, val := range distribution {
+		results_slice = append(results_slice, string(key)+strconv.Itoa(val))
+	}
+
+	slices.SortFunc(results_slice, func(a, b string) int {
+		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+	})
+
+	var final_result strings.Builder
+
+	for _, result := range results_slice {
+		final_result.WriteString(result)
+	}
+
+	return final_result.String()
+}
+
 func CheckHomsAsync(dict *FwewDict, minAffix int) {
 	defer checkWaitGroup.Done()
 
@@ -1352,8 +1437,11 @@ func CheckHomsAsync(dict *FwewDict, minAffix int) {
 		}
 
 		if err == nil && len(results) > 0 && len(results[0]) > 2 {
-
 			results[0] = results[0][1:]
+
+			// Anagram stuff
+			signature := anagramSignature(a)
+			anagramMap.Insert(signature, []string{a, results[0][0].Navi})
 
 			homoMapQuery, show := QueryHelper(results[0])
 
@@ -1696,6 +1784,8 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	resultsFile.WriteString(message + "\n")
 	fmt.Println(message)
 
+	anagramMap.Clear()
+
 	makeWaitGroup.Add(1)
 	go makeHomsAsync()
 
@@ -1769,6 +1859,43 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		}
 	}
 
+	anagramMap.mu.Lock()
+	defer anagramMap.mu.Unlock()
+
+	for key, val := range anagramMap.homoMap {
+		if len(val) > 2 {
+			anagramTopMap[key] = true
+			var buffer strings.Builder
+			for i, valvi := range val {
+				if i != 0 {
+					buffer.WriteString(" ")
+				}
+				buffer.WriteString(valvi)
+			}
+			evenWords := []string{}
+			for i, word := range val {
+				if i != 0 && i%2 == 1 {
+					evenWords = append(evenWords, word)
+				}
+			}
+			slices.SortFunc(evenWords, func(i, j string) int { return strings.Compare(i, j) })
+			var buffer2 strings.Builder
+			for i, evenWord := range evenWords {
+				if i != 0 {
+					buffer2.WriteString(" ")
+				}
+				buffer2.WriteString(evenWord)
+			}
+			evenString := buffer2.String()
+			if _, ok := anagramShortMap[evenString]; ok {
+				continue
+			}
+			anagramShortMap[evenString] = true
+			fmt.Println(key + " " + buffer.String())
+			resultsFile.WriteString(buffer.String() + "\n")
+		}
+	}
+
 	/*fmt.Println(longest)
 	resultsFile.WriteString(strconv.Itoa(int(longest)) + "\n")
 	fmt.Println(top10Longest[longest])
@@ -1813,6 +1940,7 @@ func homonymSearch() error {
 	first2StageMap.homoMap = map[string]uint8{}
 	palindromeMap.homoMap = map[string]uint8{}
 	stage3Map.homoMap = map[string]uint8{}
+	anagramMap.homoMap = map[string][]string{}
 
 	if _, err := os.Stat("previous.txt"); err == nil {
 		// path/to/whatever exists
@@ -2073,7 +2201,7 @@ func homonymSearch() error {
 	interval := 1
 
 	prevTotal := -1
-	i := 0
+	i := 15
 	// Do 1-15 individually
 	for ; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
