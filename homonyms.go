@@ -27,6 +27,7 @@ var scunthorpeMap = HomoMapStruct{}
 var benchMap = BenchMapStruct{}
 var anagramTopMap = map[string]bool{}
 var anagramShortMap = map[string]bool{}
+var anagramComponentMap = map[string]bool{}
 var benchTotal = 0
 var resultCount = 0
 var lenitors = []string{"px", "p", "ts", "tx", "t", "kx", "k", "'"}
@@ -93,6 +94,7 @@ var resultsFile *os.File
 var previous *os.File
 var palindromes *os.File
 var scunthorpe *os.File
+var anagrams *os.File
 var timeFormat = "2006-01-02 15:04:05"
 
 //var dupeLengthsMap = map[int]int{}
@@ -521,6 +523,9 @@ func StageTwo() error {
 
 	for key, val := range anagramMap.homoMap {
 		if len(val) > 1 {
+			sort.Slice(val, func(i, j int) bool {
+				return AlphabetizeHelper(val[i], val[j])
+			})
 			anagramTopMap[key] = true
 			var buffer strings.Builder
 			for i, valvi := range val {
@@ -529,8 +534,12 @@ func StageTwo() error {
 				}
 				buffer.WriteString(valvi)
 			}
-			fmt.Println(key + " " + buffer.String())
-			resultsFile.WriteString(buffer.String() + "\n")
+			if _, ok := anagramComponentMap[buffer.String()]; !ok {
+				anagramComponentMap[buffer.String()] = true
+				fmt.Println(key + " " + buffer.String())
+				anagrams.WriteString(buffer.String() + "\n")
+				resultsFile.WriteString(buffer.String() + "\n")
+			}
 		}
 	}
 
@@ -1859,6 +1868,17 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 		}
 	}
 
+	// Make sure dictionary entries are included with anagram checks
+	RunOnDict(func(word Word) error {
+		lower := strings.ToLower(word.Navi)
+
+		// Anagram stuff
+		signature := anagramSignature(lower)
+		anagramMap.Insert(signature, []string{lower, word.Navi})
+
+		return nil
+	})
+
 	anagramMap.mu.Lock()
 	defer anagramMap.mu.Unlock()
 
@@ -1890,9 +1910,13 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 			if _, ok := anagramShortMap[evenString]; ok {
 				continue
 			}
-			anagramShortMap[evenString] = true
-			fmt.Println(key + " " + buffer.String())
-			resultsFile.WriteString(buffer.String() + "\n")
+			anagramShortMap[buffer2.String()] = true
+			if _, ok := anagramComponentMap[buffer.String()]; !ok {
+				anagramComponentMap[buffer.String()] = true
+				fmt.Println(key + " " + buffer.String())
+				anagrams.WriteString(buffer.String() + "\n")
+				resultsFile.WriteString(buffer.String() + "\n")
+			}
 		}
 	}
 
@@ -2184,6 +2208,48 @@ func homonymSearch() error {
 
 	defer previous.Close()
 
+	if _, err := os.Stat("anagrams.txt"); err == nil {
+		// path/to/whatever exists
+		b, err2 := os.Open("anagrams.txt")
+		if err2 != nil {
+			fmt.Println("error opening file:", err2)
+			return err2
+		}
+
+		scanner := bufio.NewScanner(b)
+		// This will not read lines over 64k long, but works for Na'vi words just fine
+		for scanner.Scan() {
+			anagramComponentMap[scanner.Text()] = true
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+
+		a, err := os.Create("anagrams.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+
+		anagrams = a
+	} else if errors.Is(err, os.ErrNotExist) {
+		// path/to/whatever does *not* exist
+		a, err := os.Create("anagrams.txt")
+		if err != nil {
+			fmt.Println("error opening file:", err)
+			return err
+		}
+		anagrams = a
+	} else {
+		// Schrodinger: file may or may not exist. See err for details.
+
+		// Therefore, do *NOT* use !os.IsNotExist(err) to test for file existence
+
+		fmt.Println("An error occured determining whether or not anagrams.txt exists")
+		return err
+	}
+
 	// Number of threads to use as dictionaries
 	dictCount := uint8(8)
 	for i := uint8(0); i < dictCount; i++ {
@@ -2201,7 +2267,8 @@ func homonymSearch() error {
 	interval := 1
 
 	prevTotal := -1
-	i := 15
+	i := 0
+
 	// Do 1-15 individually
 	for ; i < stop_at_len; i += interval {
 		// number of dictionaries, minimum affixes, maximum affixes, minimum word length, maximum word length, start at word number N
