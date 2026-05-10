@@ -1911,10 +1911,10 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 				continue
 			}
 			anagramShortMap[buffer2.String()] = true
-			if _, ok := anagramComponentMap[buffer.String()]; !ok {
-				anagramComponentMap[buffer.String()] = true
+			if _, ok := anagramComponentMap[evenString]; !ok {
+				anagramComponentMap[evenString] = true
 				fmt.Println(key + " " + buffer.String())
-				anagrams.WriteString(buffer.String() + "\n")
+				anagrams.WriteString(evenString + "\n")
 				resultsFile.WriteString(buffer.String() + "\n")
 			}
 		}
