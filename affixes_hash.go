@@ -351,11 +351,11 @@ func verifyCaseEnding(noun string, ending string) bool {
 	return false
 }
 
-func deconjugateHelper(input ConjugationCandidate, dupes *map[string]ConjugationCandidate, candidates *[]ConjugationCandidate, prefixCheck int, suffixCheck int, unlenite int8, checkInfixes []string, lastPrefix string, lastSuffix string) []ConjugationCandidate {
+func deconjugateHelper(input ConjugationCandidate, dupes *map[string]ConjugationCandidate, candidates *[]ConjugationCandidate, prefixCheck int, suffixCheck int, unlenite int8, checkInfixes []string, lastPrefix string, lastSuffix string) {
 	candidateMap := *dupes
 
 	if isDuplicate(dupes, input) {
-		return *candidates
+		return
 	}
 
 	vowels := "aäeiìouù"
@@ -434,7 +434,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				*candidates = append(*candidates, input)
 				candidateMap[input.word] = input
 			}
-			return *candidates
+			return
 		}
 	}
 
@@ -447,7 +447,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				*candidates = append(*candidates, input)
 				candidateMap[input.word] = input
 			}
-			return *candidates
+			return
 		}
 	}
 
@@ -539,7 +539,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					candidateMap[input.word] = input
 				}
 			}
-			return *candidates
+			return
 		}
 	}
 
@@ -1073,13 +1073,14 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 							newCandidate.insistPOS = "v."
 							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, suffixCheck, unlenite, newInfixes, "", "")
 
-							if infix == "ol" {
+							switch infix {
+							case "ol":
 								newCandidate := candidateDupe(input)
 								newCandidate.word = string(runes[:i]) + "ll" + strings.TrimPrefix(shortString, infix)
 								newCandidate.infixes = isDuplicateFix(newCandidate.infixes, infix)
 								newCandidate.insistPOS = "v."
 								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, suffixCheck, unlenite, newInfixes, "", "")
-							} else if infix == "er" {
+							case "er":
 								newCandidate := candidateDupe(input)
 								newCandidate.word = string(runes[:i]) + "rr" + strings.TrimPrefix(shortString, infix)
 								newCandidate.infixes = isDuplicateFix(newCandidate.infixes, infix)
@@ -1092,21 +1093,22 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			}
 		}
 	}
-	return *candidates
 }
 
-func deconjugate(input string) []ConjugationCandidate {
+func deconjugate(input string, candidates *[]ConjugationCandidate) {
 	newCandidate := ConjugationCandidate{}
 	newCandidate.word = input
 	newCandidate.insistPOS = "any"
-	candidates2 := deconjugateHelper(newCandidate, &map[string]ConjugationCandidate{}, &[]ConjugationCandidate{}, 0, 0, 0, []string{"", "", ""}, "", "")
-	candidates2 = candidates2[1:]
-	return candidates2
+	deconjugateHelper(newCandidate, &map[string]ConjugationCandidate{}, candidates, 0, 0, 0, []string{"", "", ""}, "", "")
 }
 
 func TestDeconjugations(searchNaviWord string) (results []Word) {
-	conjugations := deconjugate(searchNaviWord)
-	for _, candidate := range conjugations {
+	conjugations := []ConjugationCandidate{}
+	deconjugate(searchNaviWord, &conjugations)
+	for i, candidate := range conjugations {
+		if i == 0 {
+			continue
+		}
 		a := strings.ReplaceAll(candidate.word, "ù", "u")
 		standardizedWordArray := dialectCrunch(strings.Split(a, " "), false)
 		a = ""
