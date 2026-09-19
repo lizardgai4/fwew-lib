@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -10,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 const dictFileName = "dictionary-v2.txt"
@@ -427,21 +424,11 @@ func CacheDict() error {
 	var err error
 
 	UncacheDict()
-	err = runOnDB(func(word Word) error {
+	err = runOnFile(func(word Word) error {
 		dictionary = append(dictionary, word)
 		return nil
 	})
-
-	if err == nil {
-		fmt.Println("cache 0 loaded (SQL)")
-	} else {
-		UncacheDict()
-		err = runOnFile(func(word Word) error {
-			dictionary = append(dictionary, word)
-			return nil
-		})
-		//fmt.Println("cache 0 loaded (File)")
-	}
+	//fmt.Println("cache 0 loaded (File)")
 
 	if err != nil {
 		UncacheDict()
@@ -551,19 +538,11 @@ func CacheDictHashOrig(mysql bool) error {
 	}
 
 	var err error
-	if mysql {
-		err = runOnDB(f)
-		if err != nil {
-			UncacheHashDict()
-			return err
-		}
-	} else {
-		err = runOnFile(f)
-		if err != nil {
-			log.Printf("Error caching dictionary: %s", err)
-			UncacheHashDict()
-			return err
-		}
+	err = runOnFile(f)
+	if err != nil {
+		log.Printf("Error caching dictionary: %s", err)
+		UncacheHashDict()
+		return err
 	}
 
 	// Reverse the order to make accidental and new homonyms easier to see
@@ -756,19 +735,12 @@ func CacheDictHash2Orig(mysql bool) error {
 	}
 
 	var err error
-	if mysql {
-		err = runOnDB(setUpTheWholeThing)
-		if err != nil {
-			UncacheHashDict2()
-			return err
-		}
-	} else {
-		err = runOnFile(setUpTheWholeThing)
-		if err != nil {
-			log.Printf("Error caching dictionary: %s", err)
-			UncacheHashDict2()
-			return err
-		}
+
+	err = runOnFile(setUpTheWholeThing)
+	if err != nil {
+		log.Printf("Error caching dictionary: %s", err)
+		UncacheHashDict2()
+		return err
 	}
 
 	dictHash2Cached = true
@@ -822,78 +794,6 @@ func RunOnDict(f func(word Word) error) (err error) {
 	}
 
 	return
-}
-
-func runOnDB(f func(word Word) error) error {
-	user := os.Getenv("FW_USER")
-	pass := os.Getenv("FW_PASS")
-	host := os.Getenv("FW_HOST")
-	name := os.Getenv("FW_DB")
-	dataSourceName := fmt.Sprintf("%s:%s@tcp(%s)/%s", user, pass, host, name)
-	db, err := sql.Open("mysql", dataSourceName)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	rows, err1 := db.Query("SELECT " +
-		"m.id, m.navi, m.ipa, m.infixes, m.partOfSpeech, s.source, b.stressed, b.syllables, b.infixDots, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'de') AS de, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'en') AS en, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'es') AS es, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'et') AS et, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'fr') AS fr, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'hu') AS hu, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'ko') AS ko, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'nl') AS nl, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'pl') AS pl, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'pt') AS pt, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'ru') AS ru, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'sv') AS sv, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'tr') AS tr, " +
-		"(SELECT localized FROM fwedit_localizedWords AS l WHERE l.id = m.id AND languageCode = 'uk') AS uk " +
-		"FROM fwedit_metaWords AS m " +
-		"INNER JOIN fwedit_sources AS s ON (m.id = s.id) " +
-		"INNER JOIN fwedit_breakdown AS b ON (s.id = b.id)")
-
-	if err1 != nil {
-		return err1
-	}
-
-	var w Word
-	var de, en, es, et, fr, hu, ko, nl, pl, pt, ru, sv, tr, uk []byte
-
-	for rows.Next() {
-		err = rows.Scan(&w.ID, &w.Navi, &w.IPA, &w.InfixLocations, &w.PartOfSpeech, &w.Source, &w.Stressed,
-			&w.Syllables, &w.InfixDots, &de, &en, &es, &et, &fr, &hu, &ko, &nl, &pl, &pt, &ru, &sv, &tr, &uk)
-
-		if err != nil {
-			return err
-		}
-
-		w.DE = string(de)
-		w.EN = string(en)
-		w.ES = string(es)
-		w.ET = string(et)
-		w.FR = string(fr)
-		w.HU = string(hu)
-		w.KO = string(ko)
-		w.NL = string(nl)
-		w.PL = string(pl)
-		w.PT = string(pt)
-		w.RU = string(ru)
-		w.SV = string(sv)
-		w.TR = string(tr)
-		w.UK = string(uk)
-
-		err = f(w)
-
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func runOnFile(f func(word Word) error) error {
