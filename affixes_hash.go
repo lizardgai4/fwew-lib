@@ -11,8 +11,15 @@ type ConjugationCandidate struct {
 	prefixes  []string
 	suffixes  []string
 	infixes   []string
-	insistPOS string
+	insistPOS uint8
 }
+
+const ANY = uint8(0)
+const NOUN = uint8(1)
+const VERB = uint8(2)
+const ADJ = uint8(3)
+const NÌ = uint8(4)
+const PN = uint8(5)
 
 func candidateDupe(candidate ConjugationCandidate) (c ConjugationCandidate) {
 	a := ConjugationCandidate{}
@@ -471,12 +478,12 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 	newString := ""
 
-	if lastRune == 'o' && (input.insistPOS == "n." || input.insistPOS == "any") {
+	if lastRune == 'o' && (input.insistPOS == NOUN || input.insistPOS == ANY) {
 		// For [word] si becoming [word]tswo
 		if strings.HasSuffix(input.word, "tswo") {
 			newCandidate := candidateDupe(input)
 			newCandidate.word = strings.TrimSuffix(input.word, "tswo") + " si"
-			newCandidate.insistPOS = "v."
+			newCandidate.insistPOS = VERB
 			newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "tswo")
 			if !isDuplicate(dupes, newCandidate) {
 				*candidates = append(*candidates, newCandidate)
@@ -485,7 +492,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		}
 	}
 
-	if (lastRune == 'a' || lastRune == 'i') && (input.insistPOS == "adj." || input.insistPOS == "any") {
+	if (lastRune == 'a' || lastRune == 'i') && (input.insistPOS == ADJ || input.insistPOS == ANY) {
 		// For lrrtok-susi and others
 		if strings.HasSuffix(input.word, "-susi") || strings.HasSuffix(input.word, "-susia") {
 			found := false
@@ -537,7 +544,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					newCandidate.prefixes = append(newCandidate.prefixes, "a")
 				}
 				newCandidate.infixes = []string{"us"}
-				newCandidate.insistPOS = "v."
+				newCandidate.insistPOS = VERB
 				if aPosition == 1 {
 					newCandidate.suffixes = append(newCandidate.suffixes, "a")
 				}
@@ -564,33 +571,33 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 	switch prefixCheck {
 	case 0:
-		if first_rune == 'a' && input.insistPOS != "n." && !strings.HasPrefix(input.insistPOS, "ad") {
+		if first_rune == 'a' && input.insistPOS != NOUN && input.insistPOS != ADJ {
 			// No nouns, adpositions or adverbs
 			newCandidate := candidateDupe(input)
 			newCandidate.word = input.word[1:]
 			newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, "a")
-			newCandidate.insistPOS = "adj."
+			newCandidate.insistPOS = ADJ
 			deconjugateHelper(newCandidate, dupes, candidates, 1, newSuffixCheck, -1, []string{}, "a", "")
-			newCandidate.insistPOS = "v."
+			newCandidate.insistPOS = VERB
 			deconjugateHelper(newCandidate, dupes, candidates, 1, newSuffixCheck, -1, []string{"", "", ""}, "a", "")
 		} else if first_rune == 'n' && strings.HasPrefix(input.word, "nì") {
 			newCandidate := candidateDupe(input)
 			newCandidate.word = strings.TrimPrefix(input.word, "nì")
 			newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, "nì")
-			newCandidate.insistPOS = "nì."
+			newCandidate.insistPOS = NÌ
 			// No other affixes allowed
 			deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{}, "nì", "") // No other fixes
 		}
 		fallthrough
 	case 1:
 		if element, ok := verbPrefixes[first_rune]; ok {
-			if input.insistPOS == "any" || input.insistPOS == "adj." {
+			if input.insistPOS == ANY || input.insistPOS == ADJ {
 				// If it has a prefix
 				if strings.HasPrefix(input.word, element) {
 					// remove it
 					newCandidate := candidateDupe(input)
 					newCandidate.word = strings.TrimPrefix(input.word, element)
-					newCandidate.insistPOS = "v."
+					newCandidate.insistPOS = VERB
 					newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
 					deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{}, element, "")
 
@@ -603,7 +610,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		fallthrough
 	case 2:
 		// Non-lenition prefixes for nouns only
-		if input.insistPOS == "any" || input.insistPOS == "n." {
+		if input.insistPOS == ANY || input.insistPOS == NOUN {
 			if element, ok := prefixes1Nouns[first_rune]; ok {
 				// If it has a prefix
 				if strings.HasPrefix(input.word, element) {
@@ -612,7 +619,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 					newCandidate := candidateDupe(input)
 					newCandidate.word = newString
-					newCandidate.insistPOS = "n."
+					newCandidate.insistPOS = NOUN
 					newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
 					deconjugateHelper(newCandidate, dupes, candidates, 3, newSuffixCheck, -1, []string{}, element, "")
 
@@ -632,7 +639,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					newCandidate := candidateDupe(input)
 					newCandidate.word = newString
 					newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
-					newCandidate.insistPOS = "n."
+					newCandidate.insistPOS = NOUN
 
 					// Could it be pekoyu (pe + 'ekoyu, not pe + kxoyu)
 					if hasAt(vowels, element, -1) {
@@ -677,7 +684,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				newCandidate := candidateDupe(input)
 				newCandidate.word = newString
 				newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, "pe")
-				newCandidate.insistPOS = "n."
+				newCandidate.insistPOS = NOUN
 
 				// Could it be pekoyu (pe + 'ekoyu, not pe + kxoyu)
 				if hasAt(vowels, "pe", -1) {
@@ -717,13 +724,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 	case 3:
 		// If it has a prefix
 		if first_rune == 'f' && strings.HasPrefix(input.word, "fra") {
-			if input.insistPOS == "any" || input.insistPOS == "n." {
+			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				// remove it
 				newString = strings.TrimPrefix(input.word, "fra")
 
 				newCandidate := candidateDupe(input)
 				newCandidate.word = newString
-				newCandidate.insistPOS = "n."
+				newCandidate.insistPOS = NOUN
 				newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, "fra")
 
 				deconjugateHelper(newCandidate, dupes, candidates, 4, newSuffixCheck, -1, []string{}, "fra", "")
@@ -737,7 +744,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 	case 4:
 		// This one will demand this makes it use lenition
 		if element, ok := prefixes1lenition[first_rune]; ok {
-			if input.insistPOS == "any" || input.insistPOS == "n." {
+			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				// If it has a lenition-causing prefix
 				if strings.HasPrefix(input.word, element) {
 					lenited := false
@@ -746,7 +753,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					newCandidate := candidateDupe(input)
 					newCandidate.word = newString
 					newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
-					newCandidate.insistPOS = "n."
+					newCandidate.insistPOS = NOUN
 
 					// Could it be pekoyu (pe + 'ekoyu, not pe + kxoyu)
 					if hasAt(vowels, element, -1) {
@@ -787,12 +794,12 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 	case 5:
 		if element, ok := stemPrefixes[first_rune]; ok {
 			// If it has a prefix
-			if input.insistPOS == "any" || input.insistPOS == "n." {
+			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				if strings.HasPrefix(input.word, element) {
 					// remove it
 					newCandidate := candidateDupe(input)
 					newCandidate.word = strings.TrimPrefix(input.word, element)
-					newCandidate.insistPOS = "n."
+					newCandidate.insistPOS = NOUN
 					newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, element)
 					deconjugateHelper(newCandidate, dupes, candidates, 6, newSuffixCheck, -1, []string{}, element, "")
 
@@ -805,11 +812,11 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		fallthrough
 	case 6:
 		if first_rune == 't' && strings.HasPrefix(input.word, "tì") {
-			if input.insistPOS == "any" || input.insistPOS == "n." {
+			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				// remove it
 				newCandidate := candidateDupe(input)
 				newCandidate.word = strings.TrimPrefix(input.word, "tì")
-				newCandidate.insistPOS = "v."
+				newCandidate.insistPOS = VERB
 				newCandidate.prefixes = isDuplicateFix(newCandidate.prefixes, "tì")
 				deconjugateHelper(newCandidate, dupes, candidates, 10, 10, -1, []string{"", "", ""}, "tì", "") // No other prefixes allowed
 
@@ -829,24 +836,24 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 1, unlenite, checkInfixes, "", "sì")
 		}
 		// special case: short genitives of pronouns like "oey" and "ngey"
-		if lastRune == 'y' && (input.insistPOS == "any" || input.insistPOS == "n.") {
+		if lastRune == 'y' && (input.insistPOS == ANY || input.insistPOS == NOUN) {
 			// oey to oe
 			newCandidate := candidateDupe(input)
 			newCandidate.word = strings.TrimSuffix(input.word, "y")
-			newCandidate.insistPOS = "pn."
+			newCandidate.insistPOS = PN
 			newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "y")
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 10, unlenite, []string{}, "", "y")
 
 			// ngey to nga
 			if strings.HasSuffix(newCandidate.word, "e") {
 				newCandidate.word = strings.TrimSuffix(newCandidate.word, "e") + "a"
-				newCandidate.insistPOS = "pn."
+				newCandidate.insistPOS = PN
 				deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 10, unlenite, []string{}, "", "y")
 			}
 		}
 		fallthrough
 	case 1:
-		if input.insistPOS == "any" || input.insistPOS == "n." {
+		if input.insistPOS == ANY || input.insistPOS == NOUN {
 			if adpositions, ok := lenitionAdposition[lastRune]; ok {
 				for oldSuffix, actual := range adpositions {
 					if strings.HasSuffix(input.word, oldSuffix) {
@@ -854,7 +861,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 						newCandidate := candidateDupe(input)
 						newCandidate.word = newString + actual[:2]
-						newCandidate.insistPOS = "n."
+						newCandidate.insistPOS = NOUN
 						newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, actual)
 						// all set to 2 to avoid mengeyä -> mengo -> me + 'eng + o
 						deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", actual)
@@ -878,7 +885,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 						newCandidate := candidateDupe(input)
 						newCandidate.word = newString
-						newCandidate.insistPOS = "n."
+						newCandidate.insistPOS = NOUN
 						newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
 						// all set to 2 to avoid mengeyä -> mengo -> me + 'eng + o
 						deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
@@ -943,13 +950,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		}
 		fallthrough
 	case 2:
-		if lastRune == 'e' && (input.insistPOS == "any" || input.insistPOS == "n.") {
+		if lastRune == 'e' && (input.insistPOS == ANY || input.insistPOS == NOUN) {
 			if strings.HasSuffix(input.word, "pe") {
 				newString = strings.TrimSuffix(input.word, "pe")
 
 				newCandidate := candidateDupe(input)
 				newCandidate.word = newString
-				newCandidate.insistPOS = "n."
+				newCandidate.insistPOS = NOUN
 				newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "pe")
 				deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 4, unlenite, []string{}, "", "pe")
 			}
@@ -957,27 +964,27 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		fallthrough
 	case 3:
 		// If it has one of them,
-		if lastRune == 'a' && input.insistPOS != "n." && !strings.HasPrefix(input.insistPOS, "ad") {
+		if lastRune == 'a' && input.insistPOS != NOUN && input.insistPOS != ADJ {
 			// No nouns, adpositions or adverbs
 			newString = strings.TrimSuffix(input.word, "a")
 
 			newCandidate := candidateDupe(input)
 			newCandidate.word = newString
-			newCandidate.insistPOS = "adj."
+			newCandidate.insistPOS = ADJ
 			newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "a")
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 4, unlenite, []string{"", "", ""}, "", "a")
-			newCandidate.insistPOS = "v."
+			newCandidate.insistPOS = VERB
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 4, unlenite, []string{"", "", ""}, "", "a")
 		}
 
 		fallthrough
 	case 4: // -o suffix "some"
-		if lastRune == 'o' && (input.insistPOS == "any" || input.insistPOS == "n.") {
+		if lastRune == 'o' && (input.insistPOS == ANY || input.insistPOS == NOUN) {
 			newString = strings.TrimSuffix(input.word, "o")
 
 			newCandidate := candidateDupe(input)
 			newCandidate.word = newString
-			newCandidate.insistPOS = "n."
+			newCandidate.insistPOS = NOUN
 			newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, "o")
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 5, unlenite, []string{}, "", "o")
 
@@ -996,7 +1003,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		fallthrough
 	case 5:
 		if oldSuffix, ok := stemSuffixes[lastRune]; ok {
-			if input.insistPOS == "any" || input.insistPOS == "n." {
+			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				// If it has one of them,
 				if strings.HasSuffix(input.word, oldSuffix) {
 					newString = strings.TrimSuffix(input.word, oldSuffix)
@@ -1004,7 +1011,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					//candidates = append(candidates, newString)
 					newCandidate := candidateDupe(input)
 					newCandidate.word = newString
-					newCandidate.insistPOS = "n."
+					newCandidate.insistPOS = NOUN
 					newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
 					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 6, unlenite, []string{}, "", oldSuffix)
 				}
@@ -1015,13 +1022,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		// verb suffixes change things from verbs to nouns, that's why we check for noun status
 		if oldSuffix, ok := verbSuffixes[lastRune]; ok {
 			// If it has one of them,
-			if input.insistPOS == "any" || input.insistPOS == "n." {
+			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				// If it has one of them,
 				if strings.HasSuffix(input.word, oldSuffix) {
 					newString = strings.TrimSuffix(input.word, oldSuffix)
 					newCandidate := candidateDupe(input)
 					newCandidate.word = newString
-					newCandidate.insistPOS = "v."
+					newCandidate.insistPOS = VERB
 
 					newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
 					deconjugateHelper(newCandidate, dupes, candidates, 10, 10, unlenite, []string{"", "", ""}, "", oldSuffix) // Don't allow any other prefixes
@@ -1063,7 +1070,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			!strings.HasSuffix(input.word, "atsi") {
 			newCandidate := candidateDupe(input)
 			newCandidate.word = strings.TrimSuffix(input.word, "si") + " si"
-			newCandidate.insistPOS = "v."
+			newCandidate.insistPOS = VERB
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, suffixCheck, unlenite, []string{"", "", ""}, "", "")
 		} else { // If there is a "si", we don't need to check for infixes
 			// Check for infixes
@@ -1077,7 +1084,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 							newCandidate := candidateDupe(input)
 							newCandidate.word = string(runes[:i]) + strings.TrimPrefix(shortString, infix)
 							newCandidate.infixes = isDuplicateFix(newCandidate.infixes, infix)
-							newCandidate.insistPOS = "v."
+							newCandidate.insistPOS = VERB
 							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, suffixCheck, unlenite, newInfixes, "", "")
 
 							switch infix {
@@ -1085,13 +1092,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 								newCandidate := candidateDupe(input)
 								newCandidate.word = string(runes[:i]) + "ll" + strings.TrimPrefix(shortString, infix)
 								newCandidate.infixes = isDuplicateFix(newCandidate.infixes, infix)
-								newCandidate.insistPOS = "v."
+								newCandidate.insistPOS = VERB
 								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, suffixCheck, unlenite, newInfixes, "", "")
 							case "er":
 								newCandidate := candidateDupe(input)
 								newCandidate.word = string(runes[:i]) + "rr" + strings.TrimPrefix(shortString, infix)
 								newCandidate.infixes = isDuplicateFix(newCandidate.infixes, infix)
-								newCandidate.insistPOS = "v."
+								newCandidate.insistPOS = VERB
 								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, suffixCheck, unlenite, newInfixes, "", "")
 							}
 						}
@@ -1105,7 +1112,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 func deconjugate(input string, candidates *[]ConjugationCandidate) {
 	newCandidate := ConjugationCandidate{}
 	newCandidate.word = input
-	newCandidate.insistPOS = "any"
+	newCandidate.insistPOS = ANY
 	deconjugateHelper(newCandidate, &map[string]ConjugationCandidate{}, candidates, 0, 0, 0, []string{"", "", ""}, "", "")
 }
 
@@ -1131,7 +1138,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 				pos = strings.ReplaceAll(pos, " ", "")
 
 				// An inter. can act like a noun or an adjective, so it gets special treatment
-				if pos == "inter." && candidate.insistPOS[0] != 'v' && len(candidate.infixes) == 0 {
+				if pos == "inter." && candidate.insistPOS != VERB && len(candidate.infixes) == 0 {
 					dupe := false
 					for _, b := range results {
 						if b.Navi == c.Navi {
@@ -1230,7 +1237,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							results = AppendAndAlphabetize(results, infixError(searchNaviWord, "tì"+rebuiltVerb, c.IPA))
 						}*/
 					}
-				} else if candidate.insistPOS == "n." {
+				} else if candidate.insistPOS == NOUN {
 					// n., pn., Prop.n. and inter. (but not vin.)
 					if len(candidate.infixes) == 0 {
 						if (pos[0] != 'v' && strings.HasSuffix(pos, "n.")) || pos == "inter." {
@@ -1241,7 +1248,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							results = AppendAndAlphabetize(results, a)
 						}
 					}
-				} else if candidate.insistPOS == "pn." {
+				} else if candidate.insistPOS == PN {
 					// pn.
 					if len(candidate.infixes) == 0 && strings.HasSuffix(pos, "pn.") {
 						a := c
@@ -1250,7 +1257,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						a.Affixes.Suffix = candidate.suffixes
 						results = AppendAndAlphabetize(results, a)
 					}
-				} else if candidate.insistPOS == "adj." {
+				} else if candidate.insistPOS == ADJ {
 					posNoun := pos
 					if len(candidate.infixes) == 0 && (posNoun == "adj." || posNoun == "num.") {
 						a := c
@@ -1259,7 +1266,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						a.Affixes.Suffix = candidate.suffixes
 						results = AppendAndAlphabetize(results, a)
 					}
-				} else if candidate.insistPOS == "v." {
+				} else if candidate.insistPOS == VERB {
 					posNoun := pos
 					if strings.HasPrefix(posNoun, "v") {
 						// Verbs with -tswo or -yu cannot have infixes
@@ -1476,7 +1483,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							}
 						}*/
 					}
-				} else if candidate.insistPOS == "nì." {
+				} else if candidate.insistPOS == NÌ {
 					posNoun := pos
 					if len(candidate.infixes) == 0 && (posNoun == "adj." || posNoun == "pn.") {
 						a := c
