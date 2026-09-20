@@ -102,7 +102,6 @@ var timeFormat = "2006-01-02 15:04:05"
 var finished = queueFinished{false, sync.Mutex{}}
 var finishedDict = queueFinished{false, sync.Mutex{}}
 var finishedSentinelValue = "lu hasey srak?"
-var finalSentinel = "Lu hasey set"
 var wordCount = 0
 var dictArray = []*FwewDict{}
 var minWait = 10.0
@@ -138,7 +137,6 @@ type WordQueue struct {
 }
 
 var writeLock sync.Mutex
-var addWaitGroup sync.WaitGroup
 var makeWaitGroup sync.WaitGroup
 var conjuWaitGroup sync.WaitGroup
 var checkWaitGroup sync.WaitGroup

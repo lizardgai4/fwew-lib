@@ -1399,9 +1399,10 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							if implContainsAny(first, []string{newInfix}) {
 								rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<1>", newInfix)
 								firstInfixes = newInfix
-								if newInfix == "ol" {
+								switch newInfix {
+								case "ol":
 									ol = true
-								} else if newInfix == "er" {
+								case "er":
 									er = true
 								}
 								break

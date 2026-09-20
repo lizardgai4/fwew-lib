@@ -185,7 +185,8 @@ func NameAlu(name_count int, dialect int, syllable_count int, noun_mode int, adj
 		if adj_mode != 1 {
 			// Adjective
 			amode := 0
-			if adj_mode == 0 {
+			switch adj_mode {
+			case 0:
 				// "something" mode
 				amode = rand.Intn(8) - 1
 				if amode <= 2 {
@@ -195,10 +196,10 @@ func NameAlu(name_count int, dialect int, syllable_count int, noun_mode int, adj
 					// Verb participles get two sides of the die
 					amode = 5
 				}
-			} else if adj_mode == -1 {
+			case -1:
 				// "any" mode
 				amode = rand.Intn(5) + 1
-			} else {
+			default:
 				amode = adj_mode
 			}
 
@@ -226,17 +227,18 @@ func NameAlu(name_count int, dialect int, syllable_count int, noun_mode int, adj
 				adj_word := fast_random(allNouns)
 
 				adj = strings.ToLower(adj_word.Navi)
-				if adj == "tsko swizaw" {
+				switch adj {
+				case "tsko swizaw":
 					adj = "Tsko Swizawyä"
-				} else if adj == "toruk makto" || adj == "torùk makto" {
+				case "toruk makto", "torùk makto":
 					if dialect == 0 || dialect == 2 {
 						adj = "Torùkä Maktoyuä"
 					} else {
 						adj = "Torukä Maktoyuä"
 					}
-				} else if adj == "mo a fngä'" {
+				case "mo a fngä'":
 					adj = "Moä a Fgnä'"
-				} else {
+				default:
 					adj = convertDialect(adj_word, dialect)
 					adjSplit := strings.Split(adj, " ")
 					adj_rune := []rune(adjSplit[0])
@@ -256,17 +258,18 @@ func NameAlu(name_count int, dialect int, syllable_count int, noun_mode int, adj
 			case 4: //origin noun
 				adj_word := fast_random(allNouns)
 				adj = strings.ToLower(adj_word.Navi)
-				if adj == "tsko swizaw" {
+				switch adj {
+				case "tsko swizaw":
 					adj = "ta Tsko Swizaw"
-				} else if adj == "toruk makto" || adj == "torùk makto" {
+				case "toruk makto", "torùk makto":
 					if dialect == 0 || dialect == 2 {
 						adj = "ta Torùkä Maktoyu"
 					} else {
 						adj = "ta Torukä Maktoyu"
 					}
-				} else if adj == "mo a fngä'" {
+				case "mo a fngä'":
 					adj = "ta Mo a Fgnä'"
-				} else {
+				default:
 					adj = convertDialect(adj_word, dialect)
 					if two_word_noun {
 						adj = glottal_caps(adj) + "ta"
