@@ -227,11 +227,17 @@ func Glob(pattern, subj string) bool {
 
 	leadingGlob := strings.HasPrefix(pattern, GLOB)
 	trailingGlob := strings.HasSuffix(pattern, GLOB)
+
+	// minus one for last element
 	end := len(parts) - 1
 
 	// Go over the leading parts and ensure they match.
-	for i := 0; i < end; i++ {
-		idx := strings.Index(subj, parts[i])
+	for i, part := range parts {
+		// Skip the last one
+		if i == end {
+			break
+		}
+		idx := strings.Index(subj, part)
 
 		switch i {
 		case 0:
@@ -247,7 +253,7 @@ func Glob(pattern, subj string) bool {
 		}
 
 		// Trim evaluated text from subj as we loop over the pattern.
-		subj = subj[idx+len(parts[i]):]
+		subj = subj[idx+len(part):]
 	}
 
 	// Reached the last section. Requires special handling.
@@ -286,7 +292,7 @@ func compress(syllables string) string {
 	ct["ew"] = "4"
 	ct["ey"] = "5"
 	for key := range ct {
-		syll = strings.Replace(syll, key, ct[key], -1)
+		syll = strings.ReplaceAll(syll, key, ct[key])
 	}
 
 	return strings.Replace(syll, "-", "", -1)
@@ -308,7 +314,7 @@ func decompress(syllables string) string {
 	ct["4"] = "ew"
 	ct["5"] = "ey"
 	for key := range ct {
-		syll = strings.Replace(syll, key, ct[key], -1)
+		syll = strings.ReplaceAll(syll, key, ct[key])
 	}
 
 	return syll

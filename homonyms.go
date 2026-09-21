@@ -303,9 +303,8 @@ func DuplicateDetector(query string) bool {
 	result := false
 	query = " " + query + " "
 
-	for i := 0; i < len(homonymsArray); i++ {
-		temp := " " + homonymsArray[i] + " "
-		if strings.Contains(temp, query) {
+	for _, homString := range homonymsArray {
+		if strings.Contains(" "+homString+" ", query) {
 			return true
 		}
 	}
@@ -593,9 +592,8 @@ func addToCandidates(candidates *[][]string, candidate1 string, baseWord string)
 	found := false
 	lenited := ""
 	for _, a := range lenitors {
-		if strings.HasPrefix(candidate1, a) {
-			lenited = strings.TrimPrefix(candidate1, a)
-			lenited = lenitionMap[a] + lenited
+		if lenited2, ok := strings.CutPrefix(candidate1, a); ok {
+			lenited = lenitionMap[a] + lenited2
 			found = true
 			break
 		}
@@ -683,9 +681,8 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 
 		if unlenite == 0 {
 			for _, a := range lenitors {
-				if strings.HasPrefix(lenited, a) {
-					lenited = strings.TrimPrefix(lenited, a)
-					lenited = lenitionMap[a] + lenited
+				if lenited2, ok := strings.CutPrefix(lenited, a); ok {
+					lenited = lenitionMap[a] + lenited2
 					break
 				}
 			}
@@ -725,9 +722,8 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 		lenited := inputNavi
 		if unlenite == 0 {
 			for _, a := range lenitors {
-				if strings.HasPrefix(lenited, a) {
-					lenited = strings.TrimPrefix(lenited, a)
-					lenited = lenitionMap[a] + lenited
+				if lenited2, ok := strings.CutPrefix(lenited, a); ok {
+					lenited = lenitionMap[a] + lenited2
 					break
 				}
 			}
@@ -757,9 +753,9 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 		fallthrough
 	case 1:
 		for _, element := range stemSuffixes {
-			if strings.HasSuffix(inputNavi, string(element[0])) {
+			if before, ok := strings.CutSuffix(inputNavi, string(element[0])); ok {
 				// regardless of whether or not it's found
-				newWord := strings.TrimSuffix(inputNavi, string(element[0])) + element
+				newWord := before + element
 				reconjugateNouns(candidates, input, newWord, prefixCheck, 2, unlenite, affixCountdown-1)
 			} else {
 				// regardless of whether or not it's found
@@ -1083,12 +1079,15 @@ func findUniques(affixes [][]string, reverse bool) string {
 						continue
 					}
 
-					for _, bPrime := range b {
+					if slices.Contains(b, aPrime) {
+						all[aPrime] = false
+					}
+					/*for _, bPrime := range b {
 						if aPrime == bPrime {
 							all[aPrime] = false
 							break
 						}
-					}
+					}*/
 				}
 
 				for _, bPrime := range b {
@@ -1097,11 +1096,14 @@ func findUniques(affixes [][]string, reverse bool) string {
 					}
 
 					checked[bPrime] = true
-					for _, aPrime := range a {
+					/*for _, aPrime := range a {
 						if aPrime == bPrime {
 							all[aPrime] = false
 							break
 						}
+					}*/
+					if slices.Contains(a, bPrime) {
+						all[bPrime] = false
 					}
 				}
 			}
@@ -1135,10 +1137,10 @@ func Unlenite(input string) []string {
 	results := []string{}
 	for _, oldPrefix := range unlenitionLetters {
 		// If it has a letter that could have changed for lenition,
-		if strings.HasPrefix(input, oldPrefix) {
+		if after, ok := strings.CutPrefix(input, oldPrefix); ok {
 			// put all possibilities in the candidates
 			for _, newPrefix := range unlenition[oldPrefix] {
-				results = append(results, newPrefix+strings.TrimPrefix(input, oldPrefix))
+				results = append(results, newPrefix+after)
 			}
 			break // We don't want the "ts" to become "txs"
 		}
@@ -1160,12 +1162,7 @@ func implContainsAll(sl []string, names []string) bool {
 			}
 		}
 	}
-	for _, val := range has {
-		if val == false {
-			return false
-		}
-	}
-	return true
+	return !slices.Contains(has, false)
 }
 
 func anagramSignature(word string) string {
@@ -1712,9 +1709,8 @@ func reconjugateAsync(startNumber int, affixLimit int8) {
 			// Lenited version of the base form, too
 			lenited := ""
 			for _, a := range lenitors {
-				if strings.HasPrefix(word.Navi, a) {
-					lenited = strings.TrimPrefix(word.Navi, a)
-					lenited = lenitionMap[a] + lenited
+				if lenited2, ok := strings.CutPrefix(word.Navi, a); ok {
+					lenited = lenitionMap[a] + lenited2
 					break
 				}
 			}
@@ -1800,8 +1796,9 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 
 	// You'd only have to adjust the conjugator number if you have
 	// a ridiculous core count like an AMD Threadripper
+	// or extremely fast RAM
 	conjugators := uint8(1)
-	for i := uint8(0); i < conjugators; i++ {
+	for range conjugators {
 		conjuWaitGroup.Add(1)
 		go reconjugateAsync(startNumber, affixLimit)
 	}
@@ -2252,7 +2249,7 @@ func homonymSearch() error {
 
 	// Number of threads to use as dictionaries
 	dictCount := uint8(8)
-	for i := uint8(0); i < dictCount; i++ {
+	for i := range dictCount {
 		dictArray = append(dictArray, FwewDictInit(i+1))
 	}
 

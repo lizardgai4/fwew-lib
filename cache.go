@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -295,7 +296,7 @@ func RomanizeSecondIPA(IPA string) string {
 		syllables := strings.Split(word[j], ".")
 
 		/* Onset */
-		for k := 0; k < len(syllables); k++ {
+		for k := range syllables {
 			syllable := strings.ReplaceAll(syllables[k], "·", "")
 			syllable = strings.ReplaceAll(syllable, "ˈ", "")
 			syllable = strings.ReplaceAll(syllable, "ˌ", "")
@@ -497,28 +498,14 @@ func CacheDictHashOrig(mysql bool) error {
 
 		// If the word appears more than once, record it
 		if _, ok := dictHash[standardizedWord]; ok {
-			found := false
-			for _, a := range tempHoms {
-				if a == standardizedWord {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(tempHoms, standardizedWord) {
 				tempHoms = append(tempHoms, standardizedWord)
 			}
 		}
 
 		if strings.Contains(standardizedWord, "é") {
 			noAcute := strings.ReplaceAll(standardizedWord, "é", "e")
-			found := false
-			for _, a := range tempHoms {
-				if a == noAcute {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if !slices.Contains(tempHoms, noAcute) {
 				tempHoms = append(tempHoms, noAcute)
 				tempHoms = append(tempHoms, standardizedWord)
 			}
@@ -566,7 +553,7 @@ func SearchTerms(input string) []string {
 	badChars := `~@#$%^&*()[]{}<>_/.,;:!?|+\"„“”«»`
 
 	// remove anything in parenthesis to avoid clogging search results
-	tempString := ""
+	var tempString strings.Builder
 	parenthesis := false
 	for _, c := range input {
 		if c == '(' {
@@ -577,10 +564,10 @@ func SearchTerms(input string) []string {
 		}
 
 		if !parenthesis {
-			tempString += string(c)
+			tempString.WriteString(string(c))
 		}
 	}
-	input = tempString
+	input = tempString.String()
 
 	// remove all the sketchy chars from arguments
 	for _, c := range badChars {
@@ -600,15 +587,8 @@ func SearchTerms(input string) []string {
 func AssignWord(wordmap map[string][]string, natlangWords string, naviWord string) (result map[string][]string) {
 	newWords := SearchTerms(natlangWords)
 
-	for i := 0; i < len(newWords); i++ {
-		duplicate := false
-		for j := 0; j < len(wordmap[newWords[i]]); j++ {
-			if wordmap[newWords[i]][j] == naviWord {
-				duplicate = true
-				break
-			}
-		}
-		if !duplicate {
+	for i := range newWords {
+		if !slices.Contains(wordmap[newWords[i]], naviWord) {
 			wordmap[newWords[i]] = append(wordmap[newWords[i]], naviWord)
 		}
 	}

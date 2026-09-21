@@ -44,7 +44,7 @@ func SingleNames(name_count int, dialect int, syllable_count int) (output string
 	output = ""
 
 	// Fill the chart with names
-	for i := 0; i < name_count; i++ {
+	for range name_count {
 		output += glottal_caps(string(single_name_gen(rand_if_zero(syllable_count), dialect))) + "\n"
 	}
 
@@ -57,7 +57,7 @@ func FullNames(ending string, name_count int, dialect int, syllable_count [3]int
 		return "Max name count is 50, max syllable count is 4"
 	}
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if syllable_count[i] > 4 || syllable_count[i] < 0 {
 			return "Max name count is 50, max syllable count is 4"
 		}
@@ -79,7 +79,7 @@ func FullNames(ending string, name_count int, dialect int, syllable_count [3]int
 	}
 
 	// Fill the chart with names
-	for i := 0; i < name_count; i++ {
+	for i := range name_count {
 		// Fill it with three names
 		output += glottal_caps(string(single_name_gen(rand_if_zero(syllable_count[0]), dialect)))
 		output += " te "
@@ -139,7 +139,7 @@ func NameAlu(name_count int, dialect int, syllable_count int, noun_mode int, adj
 
 	output = ""
 
-	for i := 0; i < name_count; i++ {
+	for range name_count {
 		output += glottal_caps(string(single_name_gen(rand_if_zero(syllable_count), dialect)))
 
 		/* Noun */
@@ -165,7 +165,7 @@ func NameAlu(name_count int, dialect int, syllable_count int, noun_mode int, adj
 		case 2:
 			verb := fast_random(allVerbs)
 			a := strings.Split(convertDialect(verb, dialect), " ")
-			for k := 0; k < len(a); k++ {
+			for k := range a {
 				noun += a[k]
 			}
 			noun = strings.ReplaceAll(noun, "-", "")
@@ -439,17 +439,10 @@ func GetPhonemeDistrosMap(lang string) (allDistros [][][]string) {
 	sort.Sort(Tuples(coda_tuples))
 
 	// Probably not needed but just in case any other number exceeds it
-	max_len := len(onset_tuples)
-	if len(nucleus_tuples) > max_len {
-		max_len = len(nucleus_tuples)
-	}
-	if len(coda_tuples) > max_len {
-		max_len = len(coda_tuples)
-	}
+	max_len := max(len(coda_tuples), max(len(nucleus_tuples), len(onset_tuples)))
 
 	// Put them into a 2d string array
-	i := 0
-	for i < max_len {
+	for i := range max_len {
 		allDistros[0] = append(allDistros[0], []string{})
 		c := len(allDistros[0]) - 1
 
@@ -470,7 +463,6 @@ func GetPhonemeDistrosMap(lang string) (allDistros [][][]string) {
 		} else {
 			allDistros[0][c] = append(allDistros[0][c], "")
 		}
-		i += 1
 	}
 
 	// Cluster time

@@ -17,6 +17,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"maps"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -66,9 +67,7 @@ func FwewDictInit(dictNum uint8) *FwewDict {
 	copy(newDict.dictionary, dictionary)
 	//copy a map
 	newDict.dictHash = map[string][]Word{}
-	for key, val := range dictHash {
-		newDict.dictHash[key] = val
-	}
+	maps.Copy(newDict.dictHash, dictHash)
 	fmt.Println("Dictionary " + strconv.Itoa(int(dictNum)) + " ready")
 
 	return &newDict
@@ -159,7 +158,7 @@ func TranslateFromNaviHash(dict *FwewDict, searchNaviWords string, checkFixes bo
 		}
 
 		if len(results[len(results)-1]) > 1 && len(strings.Split(results[len(results)-1][1].Navi, " ")) > 1 {
-			newQuery := ""
+			var newQuery strings.Builder
 			kOffset := 0
 			for k := range strings.Split(results[len(results)-1][1].Navi, " ") {
 				if i+k+kOffset >= len(allWords) {
@@ -169,14 +168,14 @@ func TranslateFromNaviHash(dict *FwewDict, searchNaviWords string, checkFixes bo
 					kOffset += 1
 				}
 				if k != 0 {
-					newQuery += " "
+					newQuery.WriteString(" ")
 				}
-				newQuery += allWords[i+k+kOffset]
+				newQuery.WriteString(allWords[i+k+kOffset])
 				if strings.HasSuffix(allWords[i+k+kOffset], "-susi") {
 					break
 				}
 			}
-			results[len(results)-1][0].Navi = newQuery
+			results[len(results)-1][0].Navi = newQuery.String()
 		}
 		i += j
 		i++
@@ -281,7 +280,6 @@ func TranslateFromNaviHashHelper(dict *FwewDict, start int, allWords []string, c
 
 	if _, ok := (*dict).dictHash[a]; ok {
 		//bareNaviWord = true
-
 		for _, b := range (*dict).dictHash[a] {
 			results[len(results)-1] = AppendAndAlphabetize(results[len(results)-1], b)
 		}
@@ -374,13 +372,15 @@ func TranslateFromNaviHashHelper(dict *FwewDict, start int, allWords []string, c
 				}
 			}
 			if found {
-				fullWord := searchNaviWord
+				var fullWord strings.Builder
+				fullWord.WriteString(searchNaviWord)
 				for _, pairWord := range pairWordSet {
-					fullWord += " " + pairWord
+					fullWord.WriteString(" ")
+					fullWord.WriteString(pairWord)
 				}
 
 				results[0] = []Word{results[0][0]}
-				a := strings.ReplaceAll(fullWord, "ù", "u")
+				a := strings.ReplaceAll(fullWord.String(), "ù", "u")
 
 				for _, definition := range (*dict).dictHash[a] {
 					// Replace the word
@@ -494,13 +494,15 @@ func TranslateFromNaviHashHelper(dict *FwewDict, start int, allWords []string, c
 						}
 					}
 					if found {
-						fullWord := newSearch
+						var fullWord strings.Builder
+						fullWord.WriteString(newSearch)
 						for _, pairWord := range pairWordSet {
-							fullWord += " " + pairWord
+							fullWord.WriteString(" ")
+							fullWord.WriteString(pairWord)
 						}
 
 						results[0] = []Word{results[0][0]}
-						a := strings.ReplaceAll(fullWord, "ù", "u")
+						a := strings.ReplaceAll(fullWord.String(), "ù", "u")
 
 						for _, definition := range (*dict).dictHash[a] {
 							// Replace the word
@@ -550,8 +552,8 @@ func SearchNatlangWord(dict *FwewDict, wordmap map[string][]string, searchWord s
 
 	firstResults := wordmap[searchWord]
 
-	for i := 0; i < len(firstResults); i++ {
-		for _, c := range (*dict).dictHash[firstResults[i]] {
+	for _, word := range firstResults {
+		for _, c := range (*dict).dictHash[word] {
 			results = AppendAndAlphabetize(results, c)
 		}
 	}
@@ -702,20 +704,19 @@ func ReefMe(ipa string, inter bool) []string {
 	// Unstressed ä becomes e
 	ipa_syllables := strings.Split(ipa, ".")
 	if len(ipa_syllables) > 1 {
-		new_ipa := ""
+		var new_ipa strings.Builder
 		for _, a := range ipa_syllables {
-			new_ipa += "."
+			new_ipa.WriteString(".")
 			if !strings.Contains(a, "ˈ") {
-				new_ipa += strings.ReplaceAll(a, "æ", "ɛ")
+				new_ipa.WriteString(strings.ReplaceAll(a, "æ", "ɛ"))
 			} else {
-				new_ipa += a
+				new_ipa.WriteString(a)
 			}
 		}
 
-		ipa = new_ipa
+		ipa = new_ipa.String()
 	}
 
-	breakdown := ""
 	ejectives := []string{"p'", "t'", "k'"}
 	soften := map[string]string{
 		"p'": "b",
@@ -748,7 +749,7 @@ func ReefMe(ipa string, inter bool) []string {
 		ipaReef = strings.ReplaceAll(ipaReef, "t͡sj", "tʃ")
 		ipaReef = strings.ReplaceAll(ipaReef, "sj", "ʃ")
 
-		temp := ""
+		var temp strings.Builder
 		runes := []rune(ipaReef)
 
 		// Glottal stops between two vowels are removed
@@ -774,10 +775,10 @@ func ReefMe(ipa string, inter bool) []string {
 					}
 				}
 			}
-			temp += string(a)
+			temp.WriteString(string(a))
 		}
 
-		ipaReef = temp
+		ipaReef = temp.String()
 	}
 
 	ipaReef = strings.TrimPrefix(ipaReef, ".")
@@ -787,53 +788,53 @@ func ReefMe(ipa string, inter bool) []string {
 	// now Romanize the reef IPA
 	word := strings.Split(ipaReef, " ")
 
-	breakdown = ""
+	var breakdown strings.Builder
 
-	for j := 0; j < len(word); j++ {
+	for j := range word {
 		word[j] = strings.ReplaceAll(word[j], "]", "")
 		word[j] = strings.ReplaceAll(word[j], "[", "")
 		// "or" means there's more than one IPA in this word, and we only want one
 		if word[j] == "or" {
-			breakdown += "or "
+			breakdown.WriteString("or ")
 			continue
 		}
 
 		syllables := strings.Split(word[j], ".")
 
 		/* Onset */
-		for k := 0; k < len(syllables); k++ {
-			breakdown += "-"
+		for k := range syllables {
+			breakdown.WriteString("-")
 
 			stressed := false
 			syllable := strings.ReplaceAll(syllables[k], "·", "")
 			if strings.Contains(syllable, "ˈ") {
 				stressed = true
-				breakdown += "__"
+				breakdown.WriteString("__")
 			}
 			syllable = strings.ReplaceAll(syllable, "ˈ", "")
 			syllable = strings.ReplaceAll(syllable, "ˌ", "")
 
 			// tsy
 			if strings.HasPrefix(syllable, "tʃ") {
-				breakdown += "ch"
+				breakdown.WriteString("ch")
 				syllable = strings.TrimPrefix(syllable, "tʃ")
 			} else if len(syllable) >= 4 && syllable[0:4] == "t͡s" {
 				// ts
-				breakdown += "ts"
+				breakdown.WriteString("ts")
 				//tsp
 				if has("ptk", nth_rune(syllable, 3)) {
 					if nth_rune(syllable, 4) == "'" {
 						// ts + ejective onset
-						breakdown += romanization2[syllable[4:6]]
+						breakdown.WriteString(romanization2[syllable[4:6]])
 						syllable = syllable[6:]
 					} else {
 						// ts + unvoiced plosive
-						breakdown += romanization2[string(syllable[4])]
+						breakdown.WriteString(romanization2[string(syllable[4])])
 						syllable = syllable[5:]
 					}
 				} else if has("lɾmnŋwj", nth_rune(syllable, 3)) {
 					// ts + other consonent
-					breakdown += romanization2[nth_rune(syllable, 3)]
+					breakdown.WriteString(romanization2[nth_rune(syllable, 3)])
 					syllable = syllable[4+len(nth_rune(syllable, 3)):]
 				} else {
 					// ts without a cluster
@@ -841,20 +842,20 @@ func ReefMe(ipa string, inter bool) []string {
 				}
 			} else if has("fs", nth_rune(syllable, 0)) {
 				//
-				breakdown += nth_rune(syllable, 0)
+				breakdown.WriteString(nth_rune(syllable, 0))
 				if has("ptk", nth_rune(syllable, 1)) {
 					if nth_rune(syllable, 2) == "'" {
 						// f/s + ejective onset
-						breakdown += romanization2[syllable[1:3]]
+						breakdown.WriteString(romanization2[syllable[1:3]])
 						syllable = syllable[3:]
 					} else {
 						// f/s + unvoiced plosive
-						breakdown += romanization2[string(syllable[1])]
+						breakdown.WriteString(romanization2[string(syllable[1])])
 						syllable = syllable[2:]
 					}
 				} else if has("lɾmnŋwj", nth_rune(syllable, 1)) {
 					// f/s + other consonent
-					breakdown += romanization2[nth_rune(syllable, 1)]
+					breakdown.WriteString(romanization2[nth_rune(syllable, 1)])
 					syllable = syllable[1+len(nth_rune(syllable, 1)):]
 				} else {
 					// f/s without a cluster
@@ -863,21 +864,21 @@ func ReefMe(ipa string, inter bool) []string {
 			} else if has("ptk", nth_rune(syllable, 0)) {
 				if nth_rune(syllable, 1) == "'" {
 					// ejective
-					breakdown += romanization2[syllable[0:2]]
+					breakdown.WriteString(romanization2[syllable[0:2]])
 					syllable = syllable[2:]
 				} else {
 					// unvoiced plosive
-					breakdown += romanization2[string(syllable[0])]
+					breakdown.WriteString(romanization2[string(syllable[0])])
 					syllable = syllable[1:]
 				}
 			} else if has("ʔlɾhmnŋvwjzbdg", nth_rune(syllable, 0)) {
 				// other normal onset
-				breakdown += romanization2[nth_rune(syllable, 0)]
+				breakdown.WriteString(romanization2[nth_rune(syllable, 0)])
 				syllable = syllable[len(nth_rune(syllable, 0)):]
 			} else if has("ʃʒ", nth_rune(syllable, 0)) {
 				// one sound representd as a cluster
 				if nth_rune(syllable, 0) == "ʃ" {
-					breakdown += "sh"
+					breakdown.WriteString("sh")
 				}
 				syllable = syllable[len(nth_rune(syllable, 0)):]
 			}
@@ -887,15 +888,15 @@ func ReefMe(ipa string, inter bool) []string {
 			 */
 			if len(syllable) > 1 && has("jw", nth_rune(syllable, 1)) {
 				//diphthong
-				breakdown += romanization2[syllable[0:len(nth_rune(syllable, 0))+1]]
+				breakdown.WriteString(romanization2[syllable[0:len(nth_rune(syllable, 0))+1]])
 				syllable = string([]rune(syllable)[2:])
 			} else if len(syllable) > 1 && has("lr", nth_rune(syllable, 0)) {
 				//psuedovowel
-				breakdown += romanization2[syllable[0:3]]
+				breakdown.WriteString(romanization2[syllable[0:3]])
 				continue // psuedovowels can't coda
 			} else {
 				//vowel
-				breakdown += romanization2[nth_rune(syllable, 0)]
+				breakdown.WriteString(romanization2[nth_rune(syllable, 0)])
 				syllable = string([]rune(syllable)[1:])
 			}
 
@@ -904,37 +905,39 @@ func ReefMe(ipa string, inter bool) []string {
 			 */
 			if len(syllable) > 0 {
 				if nth_rune(syllable, 0) == "s" {
-					breakdown += "sss" //oìsss only
+					breakdown.WriteString("sss") //oìsss only
 				} else {
 					switch syllable {
 					case "k̚":
-						breakdown += "k"
+						breakdown.WriteString("k")
 					case "p̚":
-						breakdown += "p"
+						breakdown.WriteString("p")
 					case "t̚":
-						breakdown += "t"
+						breakdown.WriteString("t")
 					case "ʔ̚":
-						breakdown += "'"
+						breakdown.WriteString("'")
 					default:
 						if syllable[0] == 'k' && len(syllable) > 1 {
-							breakdown += "kx"
+							breakdown.WriteString("kx")
 						} else {
-							breakdown += romanization2[syllable]
+							breakdown.WriteString(romanization2[syllable])
 						}
 					}
 				}
 			}
 
 			if stressed {
-				breakdown += "__"
+				breakdown.WriteString("__")
 			}
 		}
-		breakdown += " "
+		breakdown.WriteString(" ")
 	}
 
-	breakdown = strings.TrimPrefix(breakdown, "-")
-	breakdown = strings.ReplaceAll(breakdown, " -", " ")
-	breakdown = strings.TrimSuffix(breakdown, " ")
+	breakdown_str := breakdown.String()
+
+	breakdown_str = strings.TrimPrefix(breakdown_str, "-")
+	breakdown_str = strings.ReplaceAll(breakdown_str, " -", " ")
+	breakdown_str = strings.TrimSuffix(breakdown_str, " ")
 
 	// If there's a tìftang between two identical vowels, the tìftang is optional
 	shortString := strings.ReplaceAll(strings.ReplaceAll(ipaReef, "ˈ", ""), ".", "")
@@ -951,18 +954,18 @@ func ReefMe(ipa string, inter bool) []string {
 	}
 
 	// fix breakdown
-	shortString = strings.ReplaceAll(breakdown, "-", "")
+	shortString = strings.ReplaceAll(breakdown_str, "-", "")
 	for _, a := range []string{"a", "e", "ì", "o", "u", "i", "ä", "ù"} {
 		if strings.Contains(shortString, a+"'"+a) {
-			noTìftangBreakdown := strings.ReplaceAll(breakdown, a+"-'"+a, a+"-"+a)
+			noTìftangBreakdown := strings.ReplaceAll(breakdown_str, a+"-'"+a, a+"-"+a)
 			noTìftangBreakdown = strings.ReplaceAll(noTìftangBreakdown, a+"'-"+a, a+"-"+a)
 
-			breakdown += " or " + noTìftangBreakdown
+			breakdown_str += " or " + noTìftangBreakdown
 		}
 
 	}
 
-	return []string{breakdown, ipaReef}
+	return []string{breakdown_str, ipaReef}
 }
 
 func StartEverything() string {

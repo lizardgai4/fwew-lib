@@ -11,6 +11,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -170,45 +171,47 @@ func quickReef(input string) string {
 func specialU(input string, ipa string) string {
 	split := strings.Split(input, "u")
 
-	output := ""
+	var output strings.Builder
 
 	i := 0
 	for _, a := range ipa {
 		switch a {
 		case 'u':
-			output += split[i] + "u"
+			output.WriteString(split[i])
+			output.WriteString("u")
 			i++
 		case 'ʊ':
-			output += split[i] + "ù"
+			output.WriteString(split[i])
+			output.WriteString("ù")
 			i++
 		}
 	}
-	output += split[i]
+	output.WriteString(split[i])
 
-	return output
+	return output.String()
 }
 
 /* Helper function for name-alu */
-func insert_infix(verb []string, infix string) (output string) {
-	output = ""
+func insert_infix(verb []string, infix string) string {
+	var output strings.Builder
 	found_infix := false
-	for j := 0; j < len(verb); j++ {
+	for j := range verb {
 		some_verb := []rune(verb[j])
-		for k := 0; k < len(some_verb); k++ {
+		for k := range some_verb {
 			if some_verb[k] == '.' {
 				if !found_infix {
-					output += infix
+					output.WriteString(infix)
 					found_infix = true
 				}
 			} else {
-				output += string(some_verb[k])
+				output.WriteString(string(some_verb[k]))
 			}
 		}
 		if j+1 < len(verb) {
-			output += "-"
+			output.WriteString("-")
 		}
 	}
-	return glottal_caps(output)
+	return glottal_caps(output.String())
 }
 
 // Assistant function for name generating functions
@@ -225,12 +228,7 @@ func is_vowel(letter rune) (found bool) {
 	// Also arranged from most to least common (not accounting for diphthongs)
 	vowels := []rune{'a', 'e', 'u', 'ì', 'o', 'i', 'ä', 'ù'}
 	// Linear search
-	for _, a := range vowels {
-		if letter == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(vowels, letter)
 }
 
 /* Randomly select an onset for a Na'vi syllable */
@@ -240,7 +238,7 @@ func get_onset() (onset string, cluster bool) {
 	if selector > max_non_cluster { // If the number is too high for the non-cluster onsets,
 		selector -= max_non_cluster // you get to skip all of them.  It saves time.
 		// Linear search
-		for i := 0; i < len(cluster_likelihood); i++ {
+		for i := range len(cluster_likelihood) {
 			if selector < cluster_likelihood[i] {
 				return cluster_letters[i], true
 			}
@@ -249,7 +247,7 @@ func get_onset() (onset string, cluster bool) {
 		return cluster_letters[len(cluster_letters)-1], true
 	} else { // Non-clusters (single consonants)
 		// Linear search
-		for i := 0; i < len(onset_likelihood); i++ {
+		for i := range len(onset_likelihood) {
 			if selector < onset_likelihood[i] {
 				return onset_letters[i], false
 			}
@@ -263,7 +261,7 @@ func get_onset() (onset string, cluster bool) {
 func get_nucleus() (onset string) {
 	selector := rand.Intn(max_nucleus)
 	// Linear search
-	for i := 0; i < len(nucleus_likelihood); i++ {
+	for i := range len(nucleus_likelihood) {
 		if selector < nucleus_likelihood[i] {
 			return nucleus_letters[i]
 		}
@@ -276,7 +274,7 @@ func get_nucleus() (onset string) {
 func get_coda() (onset string) {
 	selector := rand.Intn(max_coda)
 	// Linear search
-	for i := 0; i < len(coda_likelihood); i++ {
+	for i := range len(coda_likelihood) {
 		if selector < coda_likelihood[i] {
 			return coda_letters[i]
 		}
@@ -368,7 +366,7 @@ func single_name_gen(syllable_count int, dialect int) (name string) {
 	cluster := false
 
 	// Make a name with len syllables
-	for i := 0; i < syllable_count; i++ {
+	for range syllable_count {
 		onset, cluster = get_onset()
 
 		// Triple consonants are whitelisted
@@ -531,7 +529,7 @@ func has(word string, character string) (output bool) {
 		return false
 	}
 	c := []rune(character)[0]
-	for i := 0; i < len(r); i++ {
+	for i := range r {
 		if c == r[i] {
 			return true
 		}
@@ -570,7 +568,7 @@ func SortedWords() (nouns []Word, adjectives []Word, verbs []Word, transitiveVer
 		return
 	}
 
-	for i := 0; i < len(words); i++ {
+	for i := range words {
 		if words[i].PartOfSpeech == "n." {
 			nouns = append(nouns, words[i])
 		} else if words[i].PartOfSpeech == "adj." {
@@ -597,34 +595,34 @@ func PhonemeDistros() {
 	//set the maps to zero
 
 	//Onsets
-	for i := 0; i < len(onset_letters); i++ {
-		onset_map[onset_letters[i]] = 0
+	for _, onset_letter := range onset_letters {
+		onset_map[onset_letter] = 0
 	}
 
 	//Clusters
 	cluster_1 := []string{"f", "s", "ts"}
 	cluster_2 := []string{"k", "kx", "l", "m", "n", "ng", "p",
 		"px", "t", "tx", "r", "w", "y"}
-	for i := 0; i < len(cluster_1); i++ {
-		for j := 0; j < len(cluster_2); j++ {
-			cluster_map[cluster_1[i]][cluster_2[j]] = 0
+	for _, element_1 := range cluster_1 {
+		for _, element_2 := range cluster_2 {
+			cluster_map[element_1][element_2] = 0
 		}
 	}
 
 	//Nuclei
-	for i := 0; i < len(nucleus_likelihood); i++ {
-		nucleus_map[nucleus_letters[i]] = 0
+	for _, letter := range nucleus_letters {
+		nucleus_map[letter] = 0
 	}
 
 	//Codas
-	for i := 0; i < len(coda_likelihood); i++ {
-		coda_map[coda_letters[i]] = 0
+	for _, letter := range coda_letters {
+		coda_map[letter] = 0
 	}
 
 	//syllable_map := map[string]int{}
 
 	// Look through all the words
-	for i := 0; i < len(words); i++ {
+	for i := range words {
 		word := strings.Split(words[i].IPA, " ")
 
 		// Piggybacking off of the frequency script to get all words with spaces
@@ -654,7 +652,7 @@ func PhonemeDistros() {
 			}
 		}
 
-		for j := 0; j < len(word); j++ {
+		for j := range word {
 			word[j] = strings.Replace(word[j], "]", "", 1500)
 			// "or" means there's more than one IPA in this word, and we only want one
 			if word[j] == "or" {
@@ -665,7 +663,7 @@ func PhonemeDistros() {
 			coda := ""
 
 			/* Onset */
-			for k := 0; k < len(syllables); k++ {
+			for k := range syllables {
 				syllable := strings.Replace(syllables[k], "·", "", 1500)
 				syllable = strings.Replace(syllable, "ˈ", "", 1500)
 				syllable = strings.Replace(syllable, "ˌ", "", 1500)
@@ -869,7 +867,7 @@ func PhonemeDistros() {
 	// Copy everything from the maps to the arrays
 
 	//Onsets
-	for i := 0; i < len(onset_likelihood); i++ {
+	for i := range len(onset_likelihood) {
 		onset_likelihood[i] = onset_map[onset_letters[i]]
 		max_onset += onset_map[onset_letters[i]]
 	}
@@ -878,24 +876,24 @@ func PhonemeDistros() {
 	max_non_cluster = max_onset
 
 	super_i := 0
-	for i := 0; i < len(cluster_1); i++ {
-		for j := 0; j < len(cluster_2); j++ {
-			cluster_letters[super_i] = cluster_1[i] + cluster_2[j]
-			cluster_likelihood[super_i] = cluster_map[cluster_1[i]][cluster_2[j]]
-			max_onset += cluster_map[cluster_1[i]][cluster_2[j]]
+	for _, i1 := range cluster_1 {
+		for _, i2 := range cluster_2 {
+			cluster_letters[super_i] = i1 + i2
+			cluster_likelihood[super_i] = cluster_map[i1][i2]
+			max_onset += cluster_map[i1][i2]
 			super_i++
 		}
 	}
 
 	//Nuclei
-	for i := 0; i < len(nucleus_likelihood); i++ {
-		nucleus_likelihood[i] = nucleus_map[nucleus_letters[i]]
-		max_nucleus += nucleus_map[nucleus_letters[i]]
+	for i, like := range nucleus_letters {
+		nucleus_likelihood[i] = nucleus_map[like]
+		max_nucleus += nucleus_map[like]
 	}
 
 	//Codas
-	for i := 0; i < len(coda_likelihood); i++ {
-		coda_likelihood[i] = coda_map[coda_letters[i]]
-		max_coda += coda_map[coda_letters[i]]
+	for i, like := range coda_letters {
+		coda_likelihood[i] = coda_map[like]
+		max_coda += coda_map[like]
 	}
 }
