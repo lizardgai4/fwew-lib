@@ -1135,11 +1135,11 @@ func findUniques(affixes [][]string, reverse bool) string {
 func Unlenite(input string) []string {
 	// find out the possible unlenited forms
 	results := []string{}
-	for _, oldPrefix := range unlenitionLetters {
+	for oldPrefix, newPrefixSlice := range unlenition[[]rune(input)[0]] {
 		// If it has a letter that could have changed for lenition,
 		if after, ok := strings.CutPrefix(input, oldPrefix); ok {
 			// put all possibilities in the candidates
-			for _, newPrefix := range unlenition[oldPrefix] {
+			for _, newPrefix := range newPrefixSlice {
 				results = append(results, newPrefix+after)
 			}
 			break // We don't want the "ts" to become "txs"

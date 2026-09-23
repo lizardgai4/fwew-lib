@@ -44,26 +44,22 @@ var unlenitionLetters = []string{
 }
 
 // "ts" is there to prevent "ts" from becoming "txs"
-var unlenition = map[string][]string{
+var unlenition = map[rune]map[string][]string{
 	// digraphs cannot unlenite
-	"ts": {}, // here to trap the "ts" ahead of the "t"
-	"px": {}, // here to trap the "px" ahead of the "p"
-	"kx": {}, // here to trap the "kx" ahead of the "k"
-	"tx": {}, // here to trap the "tx" ahead of the "t"
-	"f":  {"f", "p"},
-	"p":  {"px"},
-	"h":  {"h", "k"},
-	"k":  {"kx"},
-	"s":  {"s", "t", "ts"},
-	"t":  {"tx"},
-	"a":  {"a", "'a"},
-	"ä":  {"ä", "'ä"},
-	"e":  {"e", "'e"},
-	"i":  {"i", "'i"},
-	"ì":  {"ì", "'ì"},
-	"o":  {"o", "'o"},
-	"u":  {"u", "'u"},
-	"ù":  {"ù", "'ù"},
+	't': {"ts": {}, "tx": {}, "t": {"tx"}}, // here to trap the "ts" ahead of the "t"
+	'p': {"px": {}, "p": {"px"}},           // here to trap the "px" ahead of the "p"
+	'k': {"kx": {}, "k": {"kx"}},           // here to trap the "kx" ahead of the "k"
+	'f': {"f": {"f", "p"}},
+	'h': {"h": {"h", "k"}},
+	's': {"s": {"s", "t", "ts"}},
+	'a': {"a": {"a", "'a"}},
+	'ä': {"ä": {"ä", "'ä"}},
+	'e': {"e": {"e", "'e"}},
+	'i': {"i": {"i", "'i"}},
+	'ì': {"ì": {"ì", "'ì"}},
+	'o': {"o": {"o", "'o"}},
+	'u': {"u": {"u", "'u"}},
+	'ù': {"ù": {"ù", "'ù"}},
 }
 
 var prefixes1Nouns = map[rune]string{'f': "fì", 't': "tsa"}
@@ -559,16 +555,10 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 	}
 
 	// Make sure that the first set of prefices (a, nì, ke) aren't combined with suffixes
-	newPrefixCheck := prefixCheck
-	if newPrefixCheck == 0 {
-		newPrefixCheck = 1
-	}
+	newPrefixCheck := max(prefixCheck, 1)
 
 	// For making sure only the top one can check suffixes like this
-	newSuffixCheck := suffixCheck
-	if newSuffixCheck < 2 {
-		newSuffixCheck = 2
-	}
+	newSuffixCheck := max(suffixCheck, 2)
 
 	switch prefixCheck {
 	case 0:
@@ -631,7 +621,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			// This one will demand this makes it use lenition
 			if element, ok := prefixes1NounsLenition[first_rune]; ok {
 				// If it has a lenition-causing prefix
-				if strings.HasPrefix(input.word, element) {
+				if strings.HasPrefix(input.word, element) && len(input.word) > len(element) {
 					lenited := false
 					newString = strings.TrimPrefix(input.word, element)
 
@@ -652,13 +642,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					}
 
 					// find out the possible unlenited forms
-					for _, oldPrefix := range unlenitionLetters {
+					for oldPrefix, newPrefixSlice := range unlenition[[]rune(newString)[0]] {
 						// If it has a letter that could have changed for lenition,
 						if strings.HasPrefix(newString, oldPrefix) {
 							// put all possibilities in the candidates
 							lenited = true
 
-							for _, newPrefix := range unlenition[oldPrefix] {
+							for _, newPrefix := range newPrefixSlice {
 								newCandidate.word = newPrefix + strings.TrimPrefix(newString, oldPrefix)
 								if oldPrefix != newPrefix {
 									newCandidate.lenition = []string{newPrefix + "→" + oldPrefix}
@@ -676,7 +666,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			}
 
 			// If it has a lenition-causing prefix
-			if first_rune == 'p' && strings.HasPrefix(input.word, "pe") {
+			if len(runes) > 2 && first_rune == 'p' && strings.HasPrefix(input.word, "pe") {
 				lenited := false
 				newString = strings.TrimPrefix(input.word, "pe")
 
@@ -697,13 +687,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				}
 
 				// find out the possible unlenited forms
-				for _, oldPrefix := range unlenitionLetters {
+				for oldPrefix, newPrefixSlice := range unlenition[[]rune(newString)[0]] {
 					// If it has a letter that could have changed for lenition,
 					if strings.HasPrefix(newString, oldPrefix) {
 						// put all possibilities in the candidates
 						lenited = true
 
-						for _, newPrefix := range unlenition[oldPrefix] {
+						for _, newPrefix := range newPrefixSlice {
 							newCandidate.word = newPrefix + strings.TrimPrefix(newString, oldPrefix)
 							if oldPrefix != newPrefix {
 								newCandidate.lenition = []string{newPrefix + "→" + oldPrefix}
@@ -745,7 +735,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		if element, ok := prefixes1lenition[first_rune]; ok {
 			if input.insistPOS == ANY || input.insistPOS == NOUN {
 				// If it has a lenition-causing prefix
-				if strings.HasPrefix(input.word, element) {
+				if strings.HasPrefix(input.word, element) && len(input.word) > len(element) {
 					lenited := false
 					newString = strings.TrimPrefix(input.word, element)
 
@@ -766,13 +756,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					}
 
 					// find out the possible unlenited forms
-					for _, oldPrefix := range unlenitionLetters {
+					for oldPrefix, newPrefixSlice := range unlenition[[]rune(newString)[0]] {
 						// If it has a letter that could have changed for lenition,
 						if strings.HasPrefix(newString, oldPrefix) {
 							// put all possibilities in the candidates
 							lenited = true
 
-							for _, newPrefix := range unlenition[oldPrefix] {
+							for _, newPrefix := range newPrefixSlice {
 								newCandidate.word = newPrefix + strings.TrimPrefix(newString, oldPrefix)
 								if oldPrefix != newPrefix {
 									newCandidate.lenition = []string{newPrefix + "→" + oldPrefix}
@@ -982,15 +972,10 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 5, unlenite, []string{}, "", "o")
 
 			// Make sure fya'o-o is recognized
-			if vowels, ok := vowelSuffixes["o"]; ok {
-				for _, vowel := range vowels {
-					// Make sure fya'o-o is recognized
-					if strings.HasSuffix(newString, vowel+"-") {
-						newString = strings.TrimSuffix(newString, "-")
-						newCandidate.word = newString
-						deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 5, unlenite, []string{}, "", "o")
-					}
-				}
+			if strings.HasSuffix(newString, "o-") {
+				newString = strings.TrimSuffix(newString, "-")
+				newCandidate.word = newString
+				deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 5, unlenite, []string{}, "", "o")
 			}
 		}
 		fallthrough
@@ -1035,11 +1020,11 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 	// Short lenition check
 	if unlenite != -1 {
-		for _, oldPrefix := range unlenitionLetters {
+		for oldPrefix, newPrefixSlice := range unlenition[[]rune(input.word)[0]] {
 			// If it has a letter that could have changed for lenition,
 			if after, ok := strings.CutPrefix(input.word, oldPrefix); ok {
 				// put all possibilities in the candidates
-				for _, newPrefix := range unlenition[oldPrefix] {
+				for _, newPrefix := range newPrefixSlice {
 					newCandidate := candidateDupe(input)
 					newString = newPrefix + after
 					newCandidate.word = newString
