@@ -36,12 +36,24 @@ func candidateDupe(candidate ConjugationCandidate) (c ConjugationCandidate) {
 	return a
 }
 
-var unlenitionLetters = []string{
-	"ts", "kx", "tx", "px", // traps digraphs because they cannot unlenite
-	"f", "p", "h", "k", "s",
-	"t", "a", "ä", "e", "i",
-	"ì", "o", "u", "ù",
+var shortUnlenition = map[rune]string{
+	'p': "px",
+	't': "tx",
+	'k': "kx",
 }
+
+var vowelMap = map[rune]bool{
+	'a': true,
+	'ä': true,
+	'e': true,
+	'i': true,
+	'ì': true,
+	'o': true,
+	'u': true,
+	'ù': true,
+}
+
+var vowels = "aäeiìouù"
 
 // "ts" is there to prevent "ts" from becoming "txs"
 var unlenition = map[rune]map[string][]string{
@@ -115,14 +127,6 @@ var lenitionAdposition = map[rune]map[string]string{
 	'w': {"pimaw": "pximaw"},
 }
 
-var vowelSuffixes = map[string][]string{
-	"äo":  {"ä", "e"},
-	"eo":  {"e"},
-	"io":  {"i"},
-	"uo":  {"u"},
-	"ìlä": {"ì"},
-	"o":   {"o"},
-}
 var stemSuffixes = map[rune]string{'p': "tsyìp", 'k': "fkeyk"}
 var verbSuffixes = map[rune]string{'o': "tswo", 'u': "yu", 'g': "tseng"}
 
@@ -265,16 +269,6 @@ func verifyCaseEnding(noun string, ending string) bool {
 		"ey": true,
 		"ew": true,
 	}
-	vowels := map[string]bool{
-		"a": true,
-		"ä": true,
-		"e": true,
-		"i": true,
-		"ì": true,
-		"o": true,
-		"u": true,
-		"ù": true,
-	}
 	nounEnding := ""
 	if len(noun) >= 2 {
 		nounEnding = noun[len(noun)-2:]
@@ -313,7 +307,7 @@ func verifyCaseEnding(noun string, ending string) bool {
 				}
 			}
 		}
-	} else if _, ok := vowels[string(get_last_rune(noun, 1))]; ok {
+	} else if _, ok := vowelMap[get_last_rune(noun, 1)]; ok {
 		lastVowel := get_last_rune(noun, 1)
 		if lastVowel == 'u' || lastVowel == 'o' {
 			// No oyä or ayä
@@ -363,58 +357,6 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		return
 	}
 
-	vowels := "aäeiìouù"
-
-	// For double letter homonyms like ayyoka or ayokka
-	suffixRunes := []rune(lastSuffix)
-	if len(suffixRunes) > 1 && !is_vowel(suffixRunes[0]) {
-		newCandidate := candidateDupe(input)
-		newCandidate.word = newCandidate.word + string(suffixRunes[0])
-		deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-
-		// txeppxel is pronounced txepel, so account for that
-		if slices.Contains([]rune{'p', 't', 'k'}, suffixRunes[0]) {
-			shortUnlenition := map[rune]string{
-				'p': "px",
-				't': "tx",
-				'k': "kx",
-			}
-			newCandidate := candidateDupe(input)
-			newCandidate.word = newCandidate.word + string(shortUnlenition[suffixRunes[0]])
-			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-		}
-
-		// Ejectives before nasals are softened, so tokxmì is pronounced tokmì
-		if !is_vowel(suffixRunes[0]) {
-			unvoicedPlosives := []string{"p", "t", "k"}
-			for _, plosive := range unvoicedPlosives {
-				if strings.HasSuffix(input.word, plosive) {
-					newCandidate := candidateDupe(input)
-					newCandidate.word = newCandidate.word + "x"
-					deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-				}
-			}
-		}
-	}
-	prefixRunes := []rune(lastPrefix)
-	if len(prefixRunes) > 1 && !is_vowel(prefixRunes[len(prefixRunes)-1]) {
-		newCandidate := candidateDupe(input)
-		newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
-		deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-
-		// tsukkxìm
-		if slices.Contains([]rune{'p', 't', 'k'}, prefixRunes[len(prefixRunes)-1]) {
-			shortUnlenition := map[rune]string{
-				'p': "px",
-				't': "tx",
-				'k': "kx",
-			}
-			newCandidate := candidateDupe(input)
-			newCandidate.word = string(shortUnlenition[prefixRunes[len(prefixRunes)-1]]) + newCandidate.word
-			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
-		}
-	}
-
 	runes := []rune(input.word)
 
 	if len(runes) == 0 {
@@ -424,20 +366,69 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 	first_rune := runes[0]
 	lastRune := runes[len(runes)-1]
 
-	// fneu checking for fne-'u
-	if len(lastPrefix) > 0 && is_vowel(prefixRunes[len(prefixRunes)-1]) && is_vowel(first_rune) {
-		if prefix, ok := prefixes1lenition[[]rune(lastPrefix)[0]]; !ok || lastPrefix != prefix { // do not do this for leniting prefixes
+	// For double letter homonyms like ayyoka or ayokka
+	suffixRunes := []rune(lastSuffix)
+	if len(suffixRunes) > 1 {
+		if _, ok := vowelMap[suffixRunes[0]]; !ok {
 			newCandidate := candidateDupe(input)
-			newCandidate.word = "'" + newCandidate.word
+			newCandidate.word = newCandidate.word + string(suffixRunes[0])
 			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+
+			// txeppxel is pronounced txepel, so account for that
+			if ejective, ok := shortUnlenition[suffixRunes[0]]; ok {
+				newCandidate := candidateDupe(input)
+				newCandidate.word = newCandidate.word + ejective
+				deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+			}
+
+			// Ejectives before nasals are softened, so tokxmì is pronounced tokmì
+			if _, ok := vowelMap[suffixRunes[0]]; !ok {
+				if _, ok := shortUnlenition[lastRune]; ok {
+					newCandidate := candidateDupe(input)
+					newCandidate.word = newCandidate.word + "x"
+					deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+				}
+			}
+		}
+	}
+	prefixRunes := []rune(lastPrefix)
+	if len(prefixRunes) > 1 {
+		if _, ok := vowelMap[prefixRunes[len(prefixRunes)-1]]; !ok {
+			newCandidate := candidateDupe(input)
+			newCandidate.word = string(prefixRunes[len(prefixRunes)-1]) + newCandidate.word
+			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+
+			// tsukkxìm
+			if ejective, ok := shortUnlenition[prefixRunes[len(prefixRunes)-1]]; ok {
+				newCandidate := candidateDupe(input)
+				newCandidate.word = ejective + newCandidate.word
+				deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+			}
+		}
+	}
+
+	// fneu checking for fne-'u
+	if len(lastPrefix) > 0 {
+		if _, ok := vowelMap[prefixRunes[len(prefixRunes)-1]]; ok {
+			if _, ok := vowelMap[first_rune]; ok {
+				if prefix, ok := prefixes1lenition[[]rune(lastPrefix)[0]]; !ok || lastPrefix != prefix { // do not do this for leniting prefixes
+					newCandidate := candidateDupe(input)
+					newCandidate.word = "'" + newCandidate.word
+					deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+				}
+			}
 		}
 	}
 
 	// fea checkeing for fe'a
-	if len(lastSuffix) > 0 && is_vowel(suffixRunes[0]) && is_vowel(runes[len(runes)-1]) {
-		newCandidate := candidateDupe(input)
-		newCandidate.word += "'"
-		deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+	if len(lastSuffix) > 0 {
+		if _, ok := vowelMap[suffixRunes[0]]; ok {
+			if _, ok := vowelMap[lastRune]; ok {
+				newCandidate := candidateDupe(input)
+				newCandidate.word += "'"
+				deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+			}
+		}
 	}
 
 	// Exceptions for how words conjugate
@@ -676,15 +667,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				newCandidate.insistPOS = NOUN
 
 				// Could it be pekoyu (pe + 'ekoyu, not pe + kxoyu)
-				if hasAt(vowels, "pe", -1) {
-					// check "pxeyktan", "yktan" and "eyktan"
-					newCandidate.word = string(get_last_rune("pe", 1)) + newString
-					deconjugateHelper(newCandidate, dupes, candidates, 3, newSuffixCheck, -1, []string{}, "pe", "")
+				// check "pxeyktan", "yktan" and "eyktan"
+				newCandidate.word = string(get_last_rune("pe", 1)) + newString
+				deconjugateHelper(newCandidate, dupes, candidates, 3, newSuffixCheck, -1, []string{}, "pe", "")
 
-					// check "pxeylan", "ylan" and "'eylan"
-					newCandidate.word = "'" + newCandidate.word
-					deconjugateHelper(newCandidate, dupes, candidates, 3, newSuffixCheck, -1, []string{}, "pe", "")
-				}
+				// check "pxeylan", "ylan" and "'eylan"
+				newCandidate.word = "'" + newCandidate.word
+				deconjugateHelper(newCandidate, dupes, candidates, 3, newSuffixCheck, -1, []string{}, "pe", "")
 
 				// find out the possible unlenited forms
 				for oldPrefix, newPrefixSlice := range unlenition[[]rune(newString)[0]] {
@@ -919,15 +908,6 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 							// sneye -> sno
 							newCandidate.word = strings.TrimSuffix(newString, "e") + "o"
 							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
-						} else if vowels, ok := vowelSuffixes["yä"]; ok {
-							for _, vowel := range vowels {
-								// Make sure zekwä-äo is recognized
-								if strings.HasSuffix(newString, vowel+"-") {
-									newString = strings.TrimSuffix(newString, "-")
-									newCandidate.word = newString
-									deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
-								}
-							}
 						}
 					}
 				}
@@ -1051,7 +1031,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			// Check for infixes
 			for i, c := range runes {
 				// Infixes can only begin with vowels
-				if is_vowel(c) {
+				if _, ok := vowelMap[c]; ok {
 					shortString := string(runes[i:])
 					for _, infix := range infixes[c] {
 						available, newInfixes := verifyInfix(checkInfixes, infix)

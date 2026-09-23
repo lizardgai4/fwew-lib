@@ -2261,7 +2261,7 @@ func homonymSearch() error {
 	start = time.Now()
 
 	stop_at_len := 50
-	interval := 1
+	interval := 5
 
 	prevTotal := -1
 	i := 0
