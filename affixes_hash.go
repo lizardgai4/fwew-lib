@@ -203,10 +203,8 @@ func isDuplicateFix(fixes []string, fix string) (newFixes []string) {
 	if newfix, ok := unreefFixes[fix]; ok {
 		fix = newfix
 	}
-	for _, a := range fixes {
-		if fix == a {
-			return fixes
-		}
+	if slices.Contains(fixes, fix) {
+		return fixes
 	}
 	fixes = append(fixes, fix)
 	return fixes
@@ -217,10 +215,8 @@ func isDuplicateFix(fixes []string, fix string) (newFixes []string) {
 func implContainsAny(sl []string, names []string) bool {
 	// iterate over the array and compare given string to each element
 	for _, value := range sl {
-		for _, name := range names {
-			if value == name {
-				return true
-			}
+		if slices.Contains(names, value) {
+			return true
 		}
 	}
 	return false
@@ -495,11 +491,8 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 			}
 
 			for _, pairWordSet := range multiword_words[trimmedWord] {
-				for _, pairWord := range pairWordSet {
-					if pairWord == "si" {
-						found = true
-						break
-					}
+				if slices.Contains(pairWordSet, "si") {
+					found = true
 				}
 				if found {
 					break
@@ -1228,16 +1221,16 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						if strings.HasPrefix(posNoun, "v") {
 							// Verbs with -tswo or -yu cannot have infixes
 							if len(candidate.suffixes) > 0 {
-								for i := len(candidate.suffixes) - 1; i >= 0; i-- {
-									if candidate.suffixes[i] == "a" {
+								for _, v := range slices.Backward(candidate.suffixes) {
+									if v == "a" {
 										attributed = true
 										break
 									}
 								}
 								// Forward search fixs the "a" before "yu" and "tswo"
-								for i := len(candidate.suffixes) - 1; i >= 0; i-- {
+								for _, v := range slices.Backward(candidate.suffixes) {
 									for _, j := range verbSuffixes {
-										if candidate.suffixes[i] == j {
+										if v == j {
 											infixBan = true
 											break
 										}
@@ -1261,16 +1254,16 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 
 							if len(candidate.prefixes) > 0 {
 								// Reverse search is more likely to find it immediately
-								for i := len(candidate.prefixes) - 1; i >= 0; i-- {
-									if candidate.prefixes[i] == "a" {
+								for _, v := range slices.Backward(candidate.prefixes) {
+									if v == "a" {
 										attributed = true
-									} else if candidate.prefixes[i] == "tì" {
+									} else if v == "tì" {
 										// we found gerunds up top, so this isn't needed
 										looseTì = true
 										break
 									} else {
 										for _, j := range verbPrefixes {
-											if candidate.prefixes[i] == j {
+											if v == j {
 												if infixBan {
 													doubleBan = true
 													break
