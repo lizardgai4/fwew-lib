@@ -185,6 +185,45 @@ var weirdNounSuffixes = map[string]string{
 	"york":         "yorkì", // For a program called Litxap
 }
 
+var diphthongs = map[string]bool{
+	"ay": true,
+	"aw": true,
+	"ey": true,
+	"ew": true,
+}
+
+var diphthongEndings = map[string]bool{
+	"ìl": true,
+	"ti": true,
+	"it": true,
+	"ru": true,
+	"ur": true,
+	"ä":  true,
+	"e":  true,
+	"ri": true,
+}
+
+var vowelEndings = map[string]bool{
+	"l":  true,
+	"t":  true,
+	"ti": true,
+	"ru": true,
+	"r":  true,
+	"yä": true,
+	"ye": true,
+	"ri": true,
+}
+
+var otherEndings = map[string]bool{
+	"ìl":  true,
+	"ti":  true,
+	"it":  true,
+	"ur":  true,
+	"ä":   true,
+	"e":   true,
+	"ìri": true,
+}
+
 func isDuplicate(candidateMap *map[string]ConjugationCandidate, input ConjugationCandidate) bool {
 	map2 := (*candidateMap)
 	if a, ok := map2[input.word]; ok {
@@ -247,101 +286,93 @@ func verifyCaseEnding(noun string, ending string) bool {
 		return false
 	}
 
-	if get_last_rune(noun, 1) == 'i' && (ending == "ä" || ending == "e") {
-		//soaiä, tìftiä
-		return true
-	}
+	lastRune := get_last_rune(noun, 1)
+
 	// Don't check adpositions
 	if _, ok := caseEndings[ending]; !ok {
 		return true
 	}
 	// Non-standard conjugations
-	if noun == "omatikaya" && ending == "ä" {
+	if lastRune == 'a' && ending == "ä" && noun == "omatikaya" {
 		return true
 	}
-	diphthongs := map[string]bool{
-		"ay": true,
-		"aw": true,
-		"ey": true,
-		"ew": true,
-	}
-	nounEnding := ""
-	if len(noun) >= 2 {
-		nounEnding = noun[len(noun)-2:]
-	}
-	if _, ok := diphthongs[nounEnding]; ok {
-		nounEnding := noun[len(noun)-2:]
-		//ewur isn't valid
-		if nounEnding == "ew" && ending == "ur" {
-			return false
+
+	switch lastRune {
+	case 'y':
+		fallthrough
+	case 'w':
+		nounEnding := ""
+		if len(noun) >= 2 {
+			nounEnding = noun[len(noun)-2:]
 		}
-		// Diphthong
-		diphthongEndings := map[string]bool{
-			"ìl": true,
-			"ti": true,
-			"it": true,
-			"ru": true,
-			"ur": true,
-			"ä":  true,
-			"e":  true,
-			"ri": true,
-		}
-		if _, ok := diphthongEndings[ending]; ok {
-			return true
-		} else {
-			lastRune := get_last_rune(noun, 1)
-			switch lastRune {
-			case 'y':
-				// ayt, eyt
-				if ending == "t" {
-					return true
-				}
-			case 'w':
-				// ewr, awr
-				if ending == "r" {
-					return true
+		if _, ok := diphthongs[nounEnding]; ok {
+			//ewur isn't valid
+			if nounEnding == "ew" && ending == "ur" {
+				return false
+			}
+			// Diphthong
+			if _, ok := diphthongEndings[ending]; ok {
+				return true
+			} else {
+				switch lastRune {
+				case 'y':
+					// ayt, eyt
+					if ending == "t" {
+						return true
+					}
+				case 'w':
+					// ewr, awr
+					if ending == "r" {
+						return true
+					}
 				}
 			}
 		}
-	} else if _, ok := vowelMap[get_last_rune(noun, 1)]; ok {
-		lastVowel := get_last_rune(noun, 1)
-		if lastVowel == 'u' || lastVowel == 'o' {
+	case 'i':
+		if ending == "ä" || ending == "e" {
+			//soaiä, tìftiä
+			return true
+		}
+		fallthrough
+	case 'ä':
+		fallthrough
+	case 'e':
+		fallthrough
+	case 'a':
+		fallthrough
+	case 'ì':
+		fallthrough
+	case 'o':
+		fallthrough
+	case 'u':
+		fallthrough
+	case 'ù':
+		switch lastRune {
+		case 'u':
+			fallthrough
+		case 'o':
 			// No oyä or ayä
 			if ending == "yä" || ending == "ye" {
 				return false
 			}
+			fallthrough
+		default:
+			if _, ok := vowelEndings[ending]; ok {
+				return true
+			}
 		}
-		vowelEndings := map[string]bool{
-			"l":  true,
-			"t":  true,
-			"ti": true,
-			"ru": true,
-			"r":  true,
-			"yä": true,
-			"ye": true,
-			"ri": true,
-		}
-		if _, ok := vowelEndings[ending]; ok {
+	case '\'':
+		//'ri
+		if ending == "ru" || ending == "ri" {
 			return true
 		}
-	} else {
+		fallthrough
+	default:
 		// Consonant or psuedovowel
-		otherEndings := map[string]bool{
-			"ìl":  true,
-			"ti":  true,
-			"it":  true,
-			"ur":  true,
-			"ä":   true,
-			"e":   true,
-			"ìri": true,
-		}
 		if _, ok := otherEndings[ending]; ok {
 			return true
 		}
-		//'ri
-		if get_last_rune(noun, 1) == '\'' && ending == "ru" {
-			return true
-		}
+
 	}
 	return false
 }
