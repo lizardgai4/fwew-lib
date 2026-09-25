@@ -447,10 +447,16 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		}
 	}
 
-	// fea checkeing for fe'a
+	// fea checking for fe'a
 	if len(lastSuffix) > 0 {
-		if _, ok := vowelMap[suffixRunes[0]]; ok {
-			if _, ok := vowelMap[lastRune]; ok {
+		if _, ok := vowelMap[lastRune]; ok {
+			if _, ok := vowelMap[suffixRunes[0]]; ok {
+				newCandidate := candidateDupe(input)
+				newCandidate.word += "'"
+				deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
+			} else if lastRune == '\'' && suffixRunes[0] == 'r' && len(lastSuffix) == 2 {
+				//reef dialect has olori and oloru
+				//source: https://naviteri.org/2026/04/hiia-tisung-postiya-aham-follow-up-to-the-previous-post/#comment-68711
 				newCandidate := candidateDupe(input)
 				newCandidate.word += "'"
 				deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
