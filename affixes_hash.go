@@ -98,26 +98,50 @@ var caseEndings = map[string]bool{
 	"iri": true,
 }
 
-var adposuffixes = map[rune][]string{
+var runeSuffixes = map[rune]bool{
+	'l': true,
+	'r': true,
+	'ä': true,
+	'e': true,
+	't': true,
+}
+
+var adposuffixes = map[rune]map[rune][]string{
 	// adpositions that can be mistaken for case endings
-	'l': {"pxel", "ìl", "l"},    //"agentive"
-	'r': {"ur", "r", "mungwrr"}, //"dative"
-	'ä': {"kxamlä", "ìlä", "wä", "nuä", "yä", "ä"},
-	'e': {"kxamle", "ìle", "we", "nue", "lisre", "pxisre", "sre", "luke", "ne", "e", "ye"}, //"genitive"
-	'i': {"ti", "teri", "fpi", "ìri", "ri"},                                                //"topical"
+	'l': {'e': {"pxel"}, 'ì': {"ìl"}},    //"agentive"
+	'r': {'u': {"ur"}, 'r': {"mungwrr"}}, //"dative"
+	'ä': {'l': {"kxamlä", "ìlä"}, 'w': {"wä"}, 'u': {"nuä"}, 'y': {"yä"}},
+	'e': {
+		'l': {"kxamle", "ìle"},
+		'w': {"we"},
+		'u': {"nue"},
+		'r': {"lisre", "pxisre", "sre"},
+		'k': {"luke"},
+		'n': {"ne"},
+		'y': {"ye"},
+	}, //"genitive"
+	'i': {'t': {"ti"}, 'p': {"fpi"}, 'r': {"teri", "ìri", "ri"}}, //"topical"
 	// Case endings
-	't': {"it", "t"},
+	't': {'i': {"it"}},
 	// Sorted alphabetically by their reverse forms
-	'a': {"ftumfa", "nemfa", "rofa", "ka", "fa", "na", "ta", "ya", "yoa", "krrka", "ftuopa"}, //-a
-	'ì': {"mì"},                                                                              //-ì
-	'k': {"lok"},                                                                             //-k
-	'm': {"mìkam", "kam"},                                                                    //-m
-	'n': {"ken", "sìn", "talun"},                                                             //-n
-	'o': {"äo", "eo", "io", "uo", "ro", "to", "sko"},                                         //-o
-	'p': {"tafkip", "takip", "fkip", "kip"},                                                  //-p
-	'u': {"ftu", "hu", "ru"},                                                                 //-u
-	'w': {"pximaw", "maw", "pxaw", "few", "raw"},                                             //-w
-	'y': {"vay", "kay"},                                                                      //-y
+	'a': {
+		'f': {"ftumfa", "nemfa", "rofa", "fa"},
+		'k': {"ka", "krrka"},
+		'n': {"na"}, 't': {"ta"}, 'y': {"ya"},
+		'o': {"yoa"}, 'p': {"ftuopa"},
+	}, //-a
+	'ì': {'m': {"mì"}},                                //-ì
+	'k': {'o': {"lok"}},                               //-k
+	'm': {'a': {"mìkam", "kam"}},                      //-m
+	'n': {'e': {"ken"}, 'ì': {"sìn"}, 'u': {"talun"}}, //-n
+	'o': {
+		'ä': {"äo"}, 'e': {"eo"}, 'i': {"io"}, 'u': {"uo"},
+		'r': {"ro"}, 't': {"to"}, 'k': {"sko"},
+	}, //-o
+	'p': {'i': {"tafkip", "takip", "fkip", "kip"}},             //-p
+	'u': {'t': {"ftu"}, 'h': {"hu"}, 'r': {"ru"}},              //-u
+	'w': {'a': {"pximaw", "maw", "pxaw", "raw"}, 'e': {"few"}}, //-w
+	'y': {'a': {"vay", "kay"}},                                 //-y
 }
 
 var lenitionAdposition = map[rune]map[string]string{
@@ -744,7 +768,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				deconjugateHelper(newCandidate, dupes, candidates, 4, newSuffixCheck, -1, []string{}, "fra", "")
 
 				// check "tsatan", "tan" and "atan"
-				newCandidate.word = string(get_last_rune("fra", 1)) + newString
+				newCandidate.word = "a" + newString
 				deconjugateHelper(newCandidate, dupes, candidates, 4, newSuffixCheck, -1, []string{}, "fra", "")
 			}
 		}
@@ -764,15 +788,13 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					newCandidate.insistPOS = NOUN
 
 					// Could it be pekoyu (pe + 'ekoyu, not pe + kxoyu)
-					if hasAt(vowels, element, -1) {
-						// check "pxeyktan", "yktan" and "eyktan"
-						newCandidate.word = string(get_last_rune(element, 1)) + newString
-						deconjugateHelper(newCandidate, dupes, candidates, 5, newSuffixCheck, -1, []string{}, element, "")
+					// check "pxeyktan", "yktan" and "eyktan"
+					newCandidate.word = string(get_last_rune(element, 1)) + newString
+					deconjugateHelper(newCandidate, dupes, candidates, 5, newSuffixCheck, -1, []string{}, element, "")
 
-						// check "pxeylan", "ylan" and "'eylan"
-						newCandidate.word = "'" + newCandidate.word
-						deconjugateHelper(newCandidate, dupes, candidates, 5, newSuffixCheck, -1, []string{}, element, "")
-					}
+					// check "pxeylan", "ylan" and "'eylan"
+					newCandidate.word = "'" + newCandidate.word
+					deconjugateHelper(newCandidate, dupes, candidates, 5, newSuffixCheck, -1, []string{}, element, "")
 
 					// find out the possible unlenited forms
 					for oldPrefix, newPrefixSlice := range unlenition[[]rune(newString)[0]] {
@@ -861,7 +883,31 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 		}
 		fallthrough
 	case 1:
-		if input.insistPOS == ANY || input.insistPOS == NOUN {
+		if (input.insistPOS == ANY || input.insistPOS == NOUN) && len(runes) > 1 {
+			penultimate := runes[len(runes)-2]
+			// One-letter suffixes
+			if _, ok := runeSuffixes[lastRune]; ok {
+				oldSuffix := string(lastRune)
+				newCandidate := candidateDupe(input)
+				newCandidate.word = strings.TrimSuffix(input.word, oldSuffix)
+				newCandidate.insistPOS = NOUN
+				newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
+				// all set to 2 to avoid mengeyä -> mengo -> me + 'eng + o
+				deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
+
+				if lastRune == 'ä' && strings.HasSuffix(input.word, "iä") { // Don't make peyä -> yä -> ya (air)
+					// soaiä, tìftiä, etx.
+					newString += "a"
+					newCandidate.word = newString
+					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
+				} else if lastRune == 'e' && strings.HasSuffix(input.word, "ie") {
+					// reef of above
+					newString += "a"
+					newCandidate.word = newString
+					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "ä")
+				}
+			}
+
 			if adpositions, ok := lenitionAdposition[lastRune]; ok {
 				for oldSuffix, actual := range adpositions {
 					if newString, ok0 := strings.CutSuffix(input.word, oldSuffix); ok0 {
@@ -878,66 +924,59 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 				}
 			}
 
-			if adpositions, ok := adposuffixes[lastRune]; ok {
-				for _, oldSuffix := range adpositions {
-					// If it has one of them,
-					if newString, ok0 := strings.CutSuffix(input.word, oldSuffix); ok0 {
-						// Make sure you're using a valid case ending
-						if !verifyCaseEnding(newString, oldSuffix) {
-							continue
-						}
-
-						newCandidate := candidateDupe(input)
-						newCandidate.word = newString
-						newCandidate.insistPOS = NOUN
-						newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
-						// all set to 2 to avoid mengeyä -> mengo -> me + 'eng + o
-						deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
-
-						if oldSuffix == "ä" && !strings.HasSuffix(input.word, "yä") && strings.HasSuffix(input.word, "iä") { // Don't make peyä -> yä -> ya (air)
-							// soaiä, tìftiä, etx.
-							newString += "a"
-							newCandidate.word = newString
-							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
-						} else if oldSuffix == "e" && !strings.HasSuffix(input.word, "ye") && strings.HasSuffix(input.word, "ie") {
-							// reef of above
-							newString += "a"
-							newCandidate.word = newString
-							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "ä")
-						} else if oldSuffix == "yä" && strings.HasSuffix(newString, "e") {
-							// A one-off
-							if newString == "tse" {
-								newCandidate.word = "tsaw"
-								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
+			if group, ok := adposuffixes[lastRune]; ok {
+				if adpositions, ok := group[penultimate]; ok {
+					for _, oldSuffix := range adpositions {
+						// If it has one of them,
+						if newString, ok0 := strings.CutSuffix(input.word, oldSuffix); ok0 {
+							// Make sure you're using a valid case ending
+							if !verifyCaseEnding(newString, oldSuffix) {
+								continue
 							}
-							// ngeyä -> nga
-							newCandidate.word = strings.TrimSuffix(newString, "e") + "a"
+
+							newCandidate := candidateDupe(input)
+							newCandidate.word = newString
+							newCandidate.insistPOS = NOUN
+							newCandidate.suffixes = isDuplicateFix(newCandidate.suffixes, oldSuffix)
+							// all set to 2 to avoid mengeyä -> mengo -> me + 'eng + o
 							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
-							// oengeyä
-							newCandidate.word = strings.TrimSuffix(newString, "e")
-							if newCandidate.word == "oeng" { //no mengeyä -> meng -> me + 'eng
+
+							if oldSuffix == "yä" && strings.HasSuffix(newString, "e") {
+								// A one-off
+								switch newString {
+								case "tse":
+									newCandidate.word = "tsaw"
+									deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
+								}
+								// ngeyä -> nga
+								newCandidate.word = strings.TrimSuffix(newString, "e") + "a"
 								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
-							}
-							// sneyä -> sno
-							newCandidate.word = strings.TrimSuffix(newString, "e") + "o"
-							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
-						} else if oldSuffix == "ye" && strings.HasSuffix(newString, "e") {
-							// reef of above
-							if newString == "tse" {
-								newCandidate.word = "tsaw"
+								// oengeyä
+								newCandidate.word = strings.TrimSuffix(newString, "e")
+								if newCandidate.word == "oeng" { //no mengeyä -> meng -> me + 'eng
+									deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
+								}
+								// sneyä -> sno
+								newCandidate.word = strings.TrimSuffix(newString, "e") + "o"
+								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", oldSuffix)
+							} else if oldSuffix == "ye" && strings.HasSuffix(newString, "e") {
+								// reef of above
+								if newString == "tse" {
+									newCandidate.word = "tsaw"
+									deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
+								}
+								// ngeye -> nga
+								newCandidate.word = strings.TrimSuffix(newString, "e") + "a"
+								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
+								// oengeye
+								newCandidate.word = strings.TrimSuffix(newString, "e")
+								if newCandidate.word == "oeng" { //no mengeyä -> meng -> me + 'eng
+									deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
+								}
+								// sneye -> sno
+								newCandidate.word = strings.TrimSuffix(newString, "e") + "o"
 								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
 							}
-							// ngeye -> nga
-							newCandidate.word = strings.TrimSuffix(newString, "e") + "a"
-							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
-							// oengeye
-							newCandidate.word = strings.TrimSuffix(newString, "e")
-							if newCandidate.word == "oeng" { //no mengeyä -> meng -> me + 'eng
-								deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
-							}
-							// sneye -> sno
-							newCandidate.word = strings.TrimSuffix(newString, "e") + "o"
-							deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 2, unlenite, []string{}, "", "yä")
 						}
 					}
 				}

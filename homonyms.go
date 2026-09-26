@@ -795,47 +795,65 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 
 		// This significantly reduces the amount of conjugations needed to check, about 20% of how many it would check otherwise
 		for _, suffixes := range adposuffixes {
-			for _, element := range suffixes {
-				if vowel {
-					if implContainsAny([]string{element}, []string{"ìl", "it", "ur", "ìri"}) {
-						continue
-					} else if element == "ä" {
-						if !implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+			for _, group := range suffixes {
+				for _, element := range group {
+					if vowel {
+						if implContainsAny([]string{element}, []string{"ìl", "it", "ur", "ìri"}) {
 							continue
+						} else if element == "yä" {
+							if implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+								continue
+							}
 						}
-					} else if element == "yä" {
-						if implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+					} else if diphthong {
+						if implContainsAny([]string{element}, []string{"ìri", "yä"}) {
+							continue
+						} else if element == "it" {
+							if strings.HasSuffix(inputNavi, "ey") {
+								continue
+							}
+						} else if element == "ur" {
+							if strings.HasSuffix(inputNavi, "ew") {
+								continue
+							}
+						}
+					} else if consonant {
+						if implContainsAny([]string{element}, []string{"ri", "yä"}) {
+							continue
+						} else if element == "ru" && lastRune != '\'' {
 							continue
 						}
 					}
-				} else if diphthong {
-					if implContainsAny([]string{element}, []string{"l", "ìri", "yä"}) {
-						continue
-					} else if element == "it" {
-						if strings.HasSuffix(inputNavi, "ey") {
-							continue
-						}
-					} else if element == "ur" {
-						if strings.HasSuffix(inputNavi, "ew") {
-							continue
-						}
-					}
-				} else if consonant {
-					if implContainsAny([]string{element}, []string{"l", "t", "r", "ri", "yä"}) {
-						continue
-					} else if element == "ru" && lastRune != '\'' {
-						continue
-					}
-				}
 
-				// Tokxmì is pronounced tokmì, and there's something that accounts for this in affixes_hash
-				if strings.HasSuffix(inputNavi, "x") && !is_vowel([]rune(element)[0]) {
-					newWord := strings.TrimSuffix(inputNavi, "x") + element
+					// Tokxmì is pronounced tokmì, and there's something that accounts for this in affixes_hash
+					if strings.HasSuffix(inputNavi, "x") && !is_vowel([]rune(element)[0]) {
+						newWord := strings.TrimSuffix(inputNavi, "x") + element
+						reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
+					}
+					newWord := inputNavi + element
 					reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
 				}
-				newWord := inputNavi + element
-				reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
 			}
+		}
+
+		for elementRune := range runeSuffixes {
+			if vowel {
+				if elementRune == 'ä' {
+					if !implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+						continue
+					}
+				}
+			} else if diphthong {
+				if elementRune == 'l' {
+					continue
+				}
+			} else if consonant {
+				if elementRune == 'l' || elementRune == 't' || elementRune == 'r' {
+					continue
+				}
+			}
+			newWord := inputNavi + string(elementRune)
+			reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
 		}
 		fallthrough
 	case 5:
@@ -2075,8 +2093,9 @@ func homonymSearch() error {
 					benchTotal += 1
 					benchMap.Insert(homoMapQuery, BenchResult{candidate: word, found: false})
 				}
+			} else {
+				fmt.Println(word)
 			}
-
 		}
 	} else {
 		fmt.Println("benchmark.txt needed")
@@ -2261,7 +2280,7 @@ func homonymSearch() error {
 	start = time.Now()
 
 	stop_at_len := 50
-	interval := 5
+	interval := 1
 
 	prevTotal := -1
 	i := 0
