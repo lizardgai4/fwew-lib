@@ -422,7 +422,7 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 
 	// fneu checking for fne-'u
 	if len(lastPrefix) > 0 && len(input.word) > 0 && hasAt(vowels, lastPrefix, -1) && hasAt(vowels, input.word, 0) {
-		if !implContainsAny(prefixes1lenition, []string{lastPrefix}) { // do not do this for leniting prefixes
+		if !slices.Contains(prefixes1lenition, lastPrefix) { // do not do this for leniting prefixes
 			newCandidate := candidateDupe(input)
 			newCandidate.word = "'" + newCandidate.word
 			deconjugateHelper(newCandidate, dupes, candidates, prefixCheck, suffixCheck, unlenite, checkInfixes, "", "")
@@ -1339,7 +1339,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						firstInfixes := ""
 
 						for _, newInfix := range candidate.infixes {
-							if implContainsAny(prefirst, []string{newInfix}) {
+							if slices.Contains(prefirst, newInfix) {
 								firstInfixes += newInfix
 								rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<0>", firstInfixes)
 								if newInfix == "epeyk" || newInfix == "äpeyk" {
@@ -1363,7 +1363,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 						// first position infixes
 						firstInfixes = ""
 						for _, newInfix := range candidate.infixes {
-							if implContainsAny(first, []string{newInfix}) {
+							if slices.Contains(first, newInfix) {
 								rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<1>", newInfix)
 								firstInfixes = newInfix
 								switch newInfix {
@@ -1382,7 +1382,7 @@ func TestDeconjugations(searchNaviWord string) (results []Word) {
 							if newInfix == "eng" {
 								rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<2>", "äng")
 								break
-							} else if implContainsAny(second, []string{newInfix}) {
+							} else if slices.Contains(second, newInfix) {
 								rebuiltVerb = strings.ReplaceAll(rebuiltVerb, "<2>", newInfix)
 								break
 							}

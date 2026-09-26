@@ -1783,7 +1783,7 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 	// You'd only have to adjust the conjugator number if you have
 	// a ridiculous core count like an AMD Threadripper
 	conjugators := uint8(1)
-	for i := uint8(0); i < conjugators; i++ {
+	for range conjugators {
 		conjuWaitGroup.Add(1)
 		go reconjugateAsync(startNumber, affixLimit)
 	}
