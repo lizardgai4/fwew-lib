@@ -19,6 +19,7 @@ import (
 	"log"
 	"maps"
 	"math/rand"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -609,12 +610,7 @@ func is_vowel_ipa(letter string) (found bool) {
 	// Also arranged from most to least common (not accounting for diphthongs)
 	vowels := []string{"a", "ɛ", "ɪ", "o", "u", "i", "æ", "ʊ"}
 	// Linear search
-	for _, a := range vowels {
-		if letter == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(vowels, letter)
 }
 
 func dialectCrunch(query []string, guaranteedForest bool) []string {

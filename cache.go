@@ -115,12 +115,9 @@ func AlphabetizeHelper(a string, b string) bool {
 
 	// Start in the middle
 	bCompacted := []rune(strings.ReplaceAll(compress(strings.ToLower(b)), "-", ""))
-	lowestLen := len(aCompacted)
-	if lowestLen > len(bCompacted) {
-		lowestLen = len(bCompacted)
-	}
+	lowestLen := min(len(aCompacted), len(bCompacted))
 	// compare an individual word
-	for j := 0; j < lowestLen; j++ {
+	for j := range lowestLen {
 		// If the new letter is bigger, wait until it gets
 		if letterMap[aCompacted[j]] < letterMap[bCompacted[j]] {
 			return true
@@ -716,7 +713,6 @@ func CacheDictHash2Orig(mysql bool) error {
 	}
 
 	var err error
-
 	err = runOnFile(setUpTheWholeThing)
 	if err != nil {
 		log.Printf("Error caching dictionary: %s", err)
@@ -791,6 +787,7 @@ func runOnFile(f func(word Word) error) error {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
+
 	if scanner.Err() != nil {
 		return scanner.Err()
 	}

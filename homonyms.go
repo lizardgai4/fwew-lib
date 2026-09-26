@@ -794,65 +794,45 @@ func reconjugateNouns(candidates *[][]string, input Word, inputNavi string, pref
 		}
 
 		// This significantly reduces the amount of conjugations needed to check, about 20% of how many it would check otherwise
-		for _, suffixes := range adposuffixes {
-			for _, group := range suffixes {
-				for _, element := range group {
-					if vowel {
-						if implContainsAny([]string{element}, []string{"ìl", "it", "ur", "ìri"}) {
-							continue
-						} else if element == "yä" {
-							if implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
-								continue
-							}
-						}
-					} else if diphthong {
-						if implContainsAny([]string{element}, []string{"ìri", "yä"}) {
-							continue
-						} else if element == "it" {
-							if strings.HasSuffix(inputNavi, "ey") {
-								continue
-							}
-						} else if element == "ur" {
-							if strings.HasSuffix(inputNavi, "ew") {
-								continue
-							}
-						}
-					} else if consonant {
-						if implContainsAny([]string{element}, []string{"ri", "yä"}) {
-							continue
-						} else if element == "ru" && lastRune != '\'' {
-							continue
-						}
-					}
-
-					// Tokxmì is pronounced tokmì, and there's something that accounts for this in affixes_hash
-					if strings.HasSuffix(inputNavi, "x") && !is_vowel([]rune(element)[0]) {
-						newWord := strings.TrimSuffix(inputNavi, "x") + element
-						reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
-					}
-					newWord := inputNavi + element
-					reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
-				}
-			}
-		}
-
-		for elementRune := range runeSuffixes {
+		for _, element := range adposuffixes {
 			if vowel {
-				if elementRune == 'ä' {
+				if implContainsAny([]string{element}, []string{"ìl", "it", "ur", "ìri"}) {
+					continue
+				} else if element == "ä" {
 					if !implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
+						continue
+					}
+				} else if element == "yä" {
+					if implContainsAny([]string{string(lastRune)}, []string{"u", "o"}) {
 						continue
 					}
 				}
 			} else if diphthong {
-				if elementRune == 'l' {
+				if implContainsAny([]string{element}, []string{"l", "ìri", "yä"}) {
 					continue
+				} else if element == "it" {
+					if strings.HasSuffix(inputNavi, "ey") {
+						continue
+					}
+				} else if element == "ur" {
+					if strings.HasSuffix(inputNavi, "ew") {
+						continue
+					}
 				}
 			} else if consonant {
-				if elementRune == 'l' || elementRune == 't' || elementRune == 'r' {
+				if implContainsAny([]string{element}, []string{"l", "t", "r", "ri", "yä"}) {
+					continue
+				} else if element == "ru" && lastRune != '\'' {
 					continue
 				}
 			}
-			newWord := inputNavi + string(elementRune)
+
+			// Tokxmì is pronounced tokmì, and there's something that accounts for this in affixes_hash
+			if strings.HasSuffix(inputNavi, "x") && !is_vowel([]rune(element)[0]) {
+				newWord := strings.TrimSuffix(inputNavi, "x") + element
+				reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
+			}
+			newWord := inputNavi + element
 			reconjugateNouns(candidates, input, newWord, prefixCheck, 5, unlenite, affixCountdown-1)
 		}
 		fallthrough
@@ -1100,12 +1080,6 @@ func findUniques(affixes [][]string, reverse bool) string {
 					if slices.Contains(b, aPrime) {
 						all[aPrime] = false
 					}
-					/*for _, bPrime := range b {
-						if aPrime == bPrime {
-							all[aPrime] = false
-							break
-						}
-					}*/
 				}
 
 				for _, bPrime := range b {
@@ -1114,12 +1088,6 @@ func findUniques(affixes [][]string, reverse bool) string {
 					}
 
 					checked[bPrime] = true
-					/*for _, aPrime := range a {
-						if aPrime == bPrime {
-							all[aPrime] = false
-							break
-						}
-					}*/
 					if slices.Contains(a, bPrime) {
 						all[bPrime] = false
 					}
@@ -1153,11 +1121,11 @@ func findUniques(affixes [][]string, reverse bool) string {
 func Unlenite(input string) []string {
 	// find out the possible unlenited forms
 	results := []string{}
-	for oldPrefix, newPrefixSlice := range unlenition[[]rune(input)[0]] {
+	for _, oldPrefix := range unlenitionLetters {
 		// If it has a letter that could have changed for lenition,
 		if after, ok := strings.CutPrefix(input, oldPrefix); ok {
 			// put all possibilities in the candidates
-			for _, newPrefix := range newPrefixSlice {
+			for _, newPrefix := range unlenition[oldPrefix] {
 				results = append(results, newPrefix+after)
 			}
 			break // We don't want the "ts" to become "txs"
@@ -1814,9 +1782,8 @@ func StageThree(dictCount uint8, minAffix int, affixLimit int8, charMinSet int, 
 
 	// You'd only have to adjust the conjugator number if you have
 	// a ridiculous core count like an AMD Threadripper
-	// or extremely fast RAM
 	conjugators := uint8(1)
-	for range conjugators {
+	for i := uint8(0); i < conjugators; i++ {
 		conjuWaitGroup.Add(1)
 		go reconjugateAsync(startNumber, affixLimit)
 	}

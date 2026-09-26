@@ -227,8 +227,6 @@ func Glob(pattern, subj string) bool {
 
 	leadingGlob := strings.HasPrefix(pattern, GLOB)
 	trailingGlob := strings.HasSuffix(pattern, GLOB)
-
-	// minus one for last element
 	end := len(parts) - 1
 
 	// Go over the leading parts and ensure they match.
@@ -295,7 +293,7 @@ func compress(syllables string) string {
 		syll = strings.ReplaceAll(syll, key, ct[key])
 	}
 
-	return strings.Replace(syll, "-", "", -1)
+	return strings.ReplaceAll(syll, "-", "")
 }
 
 func decompress(syllables string) string {
