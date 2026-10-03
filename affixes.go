@@ -798,19 +798,19 @@ func GetShortLenitionTable() [][2]string {
 }
 
 // table of all the possible translations of "that"
-var thatTable = [9][5]string{
-	{"Case", "Noun", "   Clause Wrapper   ", "", ""},
-	{" ", " ", "Prox.", "Dist.", "Answer "},
-	{"====", "=====", "=====", "======", "========"},
-	{"Sub.", "tsaw", "fwa", "tsawa", "teynga  "},
-	{"Agt.", "tsal", "fula", "tsala", "teyngla "},
-	{"Pat.", "tsat", "futa", "tsata", "teyngta "},
-	{"Gen.", "tseyä", "N/A", "N/A", "teyngä  "},
-	{"Dat.", "tsar", "fura", "tsara", "teyngra "},
-	{"Top.", "tsari", "furia", "tsaria", "teyngria"},
+var thatTable = [9][6]string{
+	{"Case", "Noun", "   Clause Wrapper   ", "", "", ""},
+	{" ", " ", "Prox.", "Dist.", "Answer ", "How"},
+	{"====", "=====", "=====", "======", "========", "======="},
+	{"Sub.", "tsaw", "fwa", "tsawa", "teynga  ", "fyawa  "},
+	{"Agt.", "tsal", "fula", "tsala", "teyngla ", "fyawla "},
+	{"Pat.", "tsat", "futa", "tsata", "teyngta ", "fyawta "},
+	{"Gen.", "tseyä", "N/A", "N/A", "teyngä  ", "fyawä  "},
+	{"Dat.", "tsar", "fura", "tsara", "teyngra ", "fyawra "},
+	{"Top.", "tsari", "furia", "tsaria", "teyngria", "fyawria"},
 }
 
-func GetThatTable() [][5]string {
+func GetThatTable() [][6]string {
 	return thatTable[:]
 }
 
