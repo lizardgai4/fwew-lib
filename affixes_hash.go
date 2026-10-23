@@ -834,6 +834,10 @@ func deconjugateHelper(input ConjugationCandidate, dupes *map[string]Conjugation
 					newCandidate.word = before + "a"
 					newCandidate.insistPOS = PN
 					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 10, unlenite, []string{}, "", "y")
+
+					// sney to sno
+					newCandidate.word = before + "o"
+					deconjugateHelper(newCandidate, dupes, candidates, newPrefixCheck, 10, unlenite, []string{}, "", "y")
 				}
 			}
 		}
